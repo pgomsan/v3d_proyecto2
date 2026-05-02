@@ -1,0 +1,338 @@
+Tracker 3D - guia de trabajo:
+
+  Regla general:
+    ☐ Trabajar por fases: no pasar a la siguiente hasta que la anterior se pueda demostrar
+    ☐ Mantener RoboDK fuera de este proyecto: aqui solo se generan datos de pose y comandos
+    ☐ Guardar capturas, videos cortos o logs cuando algo funcione para usarlo luego en la memoria
+    ☐ Mantener unidades en cm salvo que se decida cambiar todo el proyecto a mm
+    ☐ Documentar cualquier cambio importante en README.md o docs/
+    ☐ Mantener trazabilidad con la evaluacion: 2.1, 2.2, 2.3, 2.4 y 2.5 suman 10 puntos
+
+  0. Punto de partida ya preparado:
+    ✔ Estructura limpia del proyecto @done(2026-05-02)
+    ✔ Menu principal con interfaz tipo Proyecto1 @done(2026-05-02)
+    ✔ Configuracion persistente en state/config.json @done(2026-05-02)
+    ✔ Seleccion de dos camaras: izquierda y derecha @done(2026-05-02)
+    ✔ Previsualizacion basica de ambas camaras @done(2026-05-02)
+    ✔ Esqueletos comentados en calibracion, vision, pose, gestos y salida RoboDK @done(2026-05-02)
+
+  1. Arranque y comprobacion de camaras:
+    Objetivo: dejar claro que el proyecto abre las dos camaras correctas.
+    Archivo principal: app.py, vision/camera.py, state/config.json
+    ✔ Ejecutar `python3 app.py` desde V3d/Proyecto2 @alta @done(26-05-02 20:18)
+    ✔ Entrar en `Buscar y elegir camaras` @done(26-05-02 20:18)
+    ✔ Anotar indices detectados por OpenCV @done(26-05-02 20:18)
+    ✔ Asignar camara izquierda y camara derecha @done(26-05-02 20:18)
+    ✔ Entrar en `Ver camaras` @done(26-05-02 20:18)
+    ✔ Comprobar que ambas ventanas se abren a la vez @done(26-05-02 20:18)
+    ✔ Comprobar que izquierda/derecha no estan intercambiadas @done(26-05-02 20:27)
+    ✔ Anotar modelo, resolucion y FPS real de cada camara en docs/ @done(26-05-02 20:32)
+    Criterio de terminado:
+      ✔ Se puede cerrar y abrir la app sin perder la configuracion @done(26-05-02 20:34)
+      ✔ `state/config.json` tiene `cameras.left.index` y `cameras.right.index` correctos @done(26-05-02 20:34)
+      ✔ Hay una captura o nota que demuestre que ambas camaras funcionan @done(26-05-02 20:34) 
+
+  2. Decisiones tecnicas antes de programar vision:
+    Objetivo: evitar reescribir codigo por no fijar el modelo geometrico.
+    Archivos recomendados: docs/arquitectura.md, docs/parametros_herramienta.md
+    ✔ Decidir metodo 3D principal: estereo, homografia planar o mezcla de ambos @alta @done(26-05-02 20:48) 
+    ☐ Definir sistema de referencia de salida: camara izquierda, mesa, centro estereo u otro
+    ☐ Decidir visor virtual: Open3D o RoboDK/simulador del companero
+    ☐ Definir que objeto real aparecera en el gemelo digital: bisturi/herramienta marcada
+    ☐ Definir que robot virtual aparecera en el gemelo digital
+    ☐ Definir punto que representa `position_cm`: centro entre marcas, marca A o punta del bisturi
+    ☐ Medir distancia real entre las dos marcas
+    ☐ Medir offset desde el punto de referencia hasta la punta util del bisturi
+    ☐ Definir colores de marca A y marca B
+    ☐ Actualizar `state/config.json` con parametros de herramienta medidos
+    Criterio de terminado:
+      ☐ Se puede explicar en 1 minuto como se pasa de dos marcas 2D a pose 3D
+      ☐ Las unidades y el frame de salida estan escritos en docs/
+
+  3. Captura de pares para calibracion:
+    Objetivo: guardar pares left/right ordenados y reutilizables.
+    Archivo a implementar: calibration/capture_calibration_images.py
+    ☐ Abrir camara izquierda y derecha usando CameraSource @alta
+    ☐ Mostrar ambas imagenes en pantalla
+    ☐ Guardar pares con mismo indice: `left_0001.png` y `right_0001.png`
+    ☐ Guardar las imagenes en `data/calibration_images/`
+    ☐ Guardar timestamp de cada par en un JSON o CSV
+    ☐ Evitar guardar una imagen si alguna camara falla
+    ☐ Capturar al menos 15-25 pares con el patron en distintas posiciones
+    Criterio de terminado:
+      ☐ Existen pares left/right con indices coincidentes
+      ☐ El patron se ve completo en ambas camaras en la mayoria de pares
+      ☐ Hay suficiente variedad de angulos y posiciones
+
+  4. Calibracion individual:
+    Objetivo: obtener intrinsecos y distorsion de cada camara.
+    Archivo a implementar: calibration/camera_calibration.py
+    Salidas esperadas:
+      - calibration/K_left.npy
+      - calibration/dist_left.npy
+      - calibration/K_right.npy
+      - calibration/dist_right.npy
+      - state/calibration_info.json
+    ☐ Elegir patron: chessboard, Charuco o circulos @alta
+    ☐ Definir tamano real del cuadrado o patron
+    ☐ Detectar esquinas/puntos en imagenes left
+    ☐ Detectar esquinas/puntos en imagenes right
+    ☐ Ejecutar `cv2.calibrateCamera` para izquierda
+    ☐ Ejecutar `cv2.calibrateCamera` para derecha
+    ☐ Guardar matrices y distorsion en calibration/
+    ☐ Guardar error de reproyeccion en state/calibration_info.json
+    ☐ Repetir capturas si el error es alto o hay pocas detecciones validas
+    Criterio de terminado:
+      ☐ Los cuatro archivos `.npy` existen
+      ☐ La app puede cargar la calibracion sin error
+      ☐ El error de reproyeccion esta documentado
+
+  5. Calibracion estereo:
+    Objetivo: obtener relacion geometrica entre las dos camaras.
+    Archivo a implementar: calibration/camera_calibration.py o nuevo modulo stereo_calibration.py
+    Salida esperada:
+      - calibration/stereo.npz
+    ☐ Usar solo pares donde el patron se detecta en ambas camaras @alta
+    ☐ Ejecutar `cv2.stereoCalibrate`
+    ☐ Guardar R, T, E, F y error estereo
+    ☐ Calcular matrices de rectificacion si se van a usar
+    ☐ Probar rectificacion visual con lineas horizontales
+    ☐ Medir una distancia conocida y comparar reconstruccion
+    Criterio de terminado:
+      ☐ `calibration/stereo.npz` existe
+      ☐ Las lineas epipolares quedan razonablemente alineadas
+      ☐ Se ha medido al menos una distancia conocida
+
+  6. Homografia, si se usa plano:
+    Objetivo: dejar preparada la parte planar sin mezclarla con estereo.
+    Archivos a implementar: calibration/select_points.py, calibration/homography.py
+    ☐ Seleccionar cuatro puntos del plano en imagen
+    ☐ Guardar puntos seleccionados en state/
+    ☐ Definir coordenadas reales del plano en cm
+    ☐ Calcular H con OpenCV
+    ☐ Guardar `calibration/H.npy`
+    ☐ Probar transformacion pixel -> plano con puntos conocidos
+    Criterio de terminado:
+      ☐ H existe y transforma puntos de prueba de forma coherente
+      ☐ Esta claro si H se usa para pose final o solo para depuracion
+
+  7. Deteccion 2D y correspondencias:
+    Objetivo: detectar marca A y marca B en cada frame y resolver correspondencias entre camaras.
+    Requisito cubierto: 2.2
+    Archivo a implementar: vision/color_markers.py
+    ☐ Implementar modo manual inicial: seleccionar con raton marca A y B en izquierda y derecha @alta
+    ☐ Guardar correspondencias manuales como pares: A_left/A_right y B_left/B_right
+    ☐ Mostrar visualmente el mismo ID/color en ambas camaras para evitar cruzar correspondencias
+    ☐ Crear ajuste HSV para marca A y marca B @alta
+    ☐ Implementar `threshold_color`
+    ☐ Implementar filtrado morfologico
+    ☐ Implementar busqueda de contornos
+    ☐ Calcular centro, area y confianza de cada marca
+    ☐ Resolver correspondencias automaticas entre detecciones izquierda/derecha
+    ☐ Gestionar caso de marca no detectada
+    ☐ Dibujar detecciones en `vision/frame_debug.py`
+    ☐ Guardar ejemplos buenos y malos en data/samples/
+    Criterio de terminado:
+      ☐ Marca A y B se detectan en condiciones normales
+      ☐ En modo manual se pueden seleccionar correspondencias correctas
+      ☐ En modo automatico cada punto mantiene su identidad A/B
+      ☐ Si falta una marca, el sistema no se cae
+      ☐ Hay visualizacion clara de centros detectados
+
+  8. Reconstruccion 3D:
+    Objetivo: pasar de detecciones 2D a puntos 3D respecto a un sistema de referencia del mundo.
+    Requisito cubierto: 2.3
+    Archivos a implementar: main_pose.py, pose/geometry.py, pose/rod_pose.py
+    ☐ Cargar calibracion necesaria antes de procesar frames @alta
+    ☐ Definir transformacion desde camaras al sistema 3D de referencia del mundo
+    ☐ Obtener punto 2D de marca A en izquierda y derecha
+    ☐ Obtener punto 2D de marca B en izquierda y derecha
+    ☐ Triangular marca A
+    ☐ Triangular marca B
+    ☐ Convertir coordenadas homogeneas a X, Y, Z
+    ☐ Comprobar que el signo y la escala tienen sentido
+    ☐ Mostrar coordenadas 3D en consola o pantalla
+    ☐ Proyectar puntos 3D estimados de vuelta sobre la imagen para validar visualmente
+    Criterio de terminado:
+      ☐ Al mover la herramienta, X/Y/Z cambian de forma coherente
+      ☐ La distancia reconstruida entre marcas se parece a la distancia real
+      ☐ Las posiciones se expresan claramente en el frame del mundo elegido
+
+  9. Pose de la herramienta:
+    Objetivo: obtener posicion, direccion y orientacion util del bisturi.
+    Archivos a implementar: pose/geometry.py, pose/rod_pose.py
+    ☐ Implementar distancia, punto medio y normalizacion de vectores
+    ☐ Calcular vector direccion desde marca A hacia marca B @alta
+    ☐ Decidir si la posicion final es centro, marca A o punta util
+    ☐ Aplicar `tip_offset_cm` si la salida debe ser la punta
+    ☐ Construir payload de pose JSON serializable
+    ☐ Guardar ultima pose en `state/last_pose.json`
+    ☐ Anadir poses a `state/logs/poses.jsonl`
+    Criterio de terminado:
+      ☐ El payload incluye tool_id, position_cm, direction, markers y confidence
+      ☐ La pose no salta de forma absurda cuando la herramienta se mueve suave
+
+  10. Tracking temporal y estabilidad:
+    Objetivo: mejorar continuidad sin esconder errores de deteccion.
+    Archivos probables: main_pose.py, pose/rod_pose.py
+    ☐ Guardar ultima pose valida
+    ☐ Mantener estado `detected`, `partial`, `lost`
+    ☐ Aplicar suavizado simple si hay ruido
+    ☐ Medir FPS del bucle principal
+    ☐ Evitar actualizar pose si la confianza es baja
+    ☐ Dibujar trayectoria corta para depuracion
+    Criterio de terminado:
+      ☐ Perdidas breves no rompen la ejecucion
+      ☐ Se ve el estado actual del sistema
+      ☐ El suavizado no introduce demasiado retraso
+
+  11. Gestos y comandos:
+    Objetivo: producir comandos simples para que RoboDK los interprete.
+    Requisito cubierto: 2.4
+    Archivos a implementar: gestures/hand_detector.py, gestures/gesture_classifier.py, main_gestures.py
+    ☐ Implementar detector de mano con MediaPipe @alta
+    ☐ Seguir al menos dos puntos de interes de una persona, por ejemplo muneca y punta de dedo, o dos munecas
+    ☐ Estimar posiciones relativas entre esos puntos de interes
+    ☐ Clasificar `open_hand`
+    ☐ Clasificar `closed_fist`
+    ☐ Clasificar `two_fingers`
+    ☐ Mapear gesto a comando con `state/config.json`
+    ☐ Guardar ultimo gesto en `state/last_gesture.json`
+    ☐ Anadir gestos a `state/logs/gestures.jsonl`
+    Criterio de terminado:
+      ☐ Se siguen dos puntos de interes humanos de forma continua
+      ☐ Mano abierta produce `stop`
+      ☐ Puno cerrado produce `continue`
+      ☐ Dos dedos produce `pause`
+      ☐ Gestos dudosos producen `none` o baja confianza
+
+  12. Interfaz con RoboDK:
+    Objetivo: entregar datos claros al proyecto del companero y conectar con el robot virtual.
+    Requisitos relacionados: 2.1, 2.3 y 2.5
+    Archivos a implementar: robot/tool_transform.py
+    ☐ Acordar formato final con el companero @alta
+    ☐ Decidir metodo de intercambio: JSON, MQTT, socket o lectura de log
+    ☐ Crear payload conjunto: pose + comando
+    ☐ Incluir unidades y frame de referencia
+    ☐ Confirmar que el companero puede actualizar un robot virtual con nuestra pose/comando
+    ☐ No implementar cinematica ni control del robot aqui
+    Criterio de terminado:
+      ☐ El companero puede leer un ejemplo de payload sin preguntar nada
+      ☐ El payload de ejemplo esta documentado en docs/interfaz_robodk.md
+
+  13. Gemelo digital, visor 3D y realidad aumentada:
+    Objetivo: cumplir la parte visual del proyecto: escena virtual + objeto real + robot virtual + proyeccion sobre imagen.
+    Requisitos cubiertos: 2.1 y 2.3
+    Archivos probables: nuevo modulo viewer/, robot/tool_transform.py, main_pose.py
+    ☐ Crear una escena virtual simple con sistema de ejes y plano/mesa @alta
+    ☐ Incluir representacion del objeto real seguido, por ejemplo bisturi/herramienta
+    ☐ Incluir un robot virtual, propio en Open3D o recibido desde RoboDK
+    ☐ Actualizar continuamente la posicion del objeto real en el visor
+    ☐ Mostrar trayectoria reciente del objeto en la escena virtual
+    ☐ Proyectar el objeto virtual o puntos 3D sobre una imagen de camara como realidad aumentada
+    ☐ Guardar capturas del visor virtual y de la realidad aumentada para la memoria
+    Criterio de terminado:
+      ☐ El visor 3D muestra al menos objeto real estimado + robot virtual
+      ☐ El objeto se mueve en el visor cuando se mueve el objeto real
+      ☐ Hay una imagen con realidad aumentada sobre una captura de camara
+
+  14. Aplicacion integrada y procesamiento eficiente:
+    Objetivo: integrar vision, pose, gestos y visor sin bloquear la aplicacion.
+    Requisito cubierto: 2.5
+    Archivos probables: app.py, main_pose.py, main_gestures.py, nuevo modulo runtime/
+    ☐ Definir arquitectura de hilos o procesos: captura, vision, gestos, visor/exportacion @alta
+    ☐ Crear colas o estado compartido seguro para pasar frames, poses y comandos
+    ☐ Evitar que el visor bloquee la captura de camaras
+    ☐ Evitar que la deteccion de gestos bloquee la estimacion de pose
+    ☐ Mostrar FPS por modulo o al menos FPS global
+    ☐ Crear modo demo integrado: camaras + pose + gestos + visor/exportacion
+    Criterio de terminado:
+      ☐ La app integrada funciona de forma continua sin congelarse
+      ☐ La demo muestra pose 3D y comando de gesto a la vez
+      ☐ Se puede explicar que partes van en paralelo
+
+  15. Validacion:
+    Objetivo: medir si funciona, no solo verlo moverse.
+    ☐ Probar herramienta quieta durante 10 segundos
+    ☐ Probar movimiento lento
+    ☐ Probar movimiento rapido
+    ☐ Probar oclusion parcial de una marca
+    ☐ Medir distancia reconstruida entre marcas en varias posiciones
+    ☐ Estimar error medio en X, Y y Z con posiciones conocidas
+    ☐ Guardar capturas/videos para la memoria
+    Criterio de terminado:
+      ☐ Hay tabla de errores
+      ☐ Hay limites conocidos: luz, oclusion, distancia, sincronizacion
+
+  16. Demo y memoria:
+    Objetivo: preparar entrega repetible.
+    Requisitos cubiertos: todos, especialmente 2.3 y 2.5
+    ☐ Escribir instrucciones de instalacion
+    ☐ Escribir instrucciones de ejecucion
+    ☐ Explicar calibracion individual
+    ☐ Explicar calibracion estereo u homografia
+    ☐ Explicar deteccion de marcas
+    ☐ Explicar reconstruccion 3D
+    ☐ Explicar pose de herramienta
+    ☐ Explicar gestos y comandos
+    ☐ Explicar escena virtual/gemelo digital y realidad aumentada
+    ☐ Explicar integracion multihilo o distribuida
+    ☐ Incluir resultados con imagenes, tabla o grafica
+    ☐ Preparar demo corta: abrir camaras, detectar marcas, mostrar pose, hacer gesto stop/continue
+    Criterio de terminado:
+      ☐ Otra persona puede ejecutar la demo siguiendo el README
+      ☐ La memoria tiene capturas reales del sistema funcionando
+
+  17. Mejoras opcionales:
+    ☐ Exportar trayectoria a CSV @opcional
+    ☐ Anadir filtro de Kalman @opcional
+    ☐ Crear vista 3D de trayectoria @opcional
+    ☐ Detectar varias herramientas @opcional
+    ☐ Sustituir HSV por detector aprendido si la luz da problemas @opcional
+    ☐ Crear script de reproduccion con videos grabados para depurar sin camaras @opcional
+
+  18. Evaluacion oficial Proyecto 2:
+    Titulo: Posicionamiento 3D de puntos de interes con dos camaras.
+    Idea clave: a diferencia del proyecto anterior, no se restringe la aplicacion a un plano; se usan dos camaras para posicionar objetos reales.
+
+    2.1 Gemelo digital y visor 3D - 2 puntos:
+      ☐ Crear y mostrar una escena virtual mas compleja
+      ☐ La escena debe ser gemelo digital de la escena de la aplicacion
+      ☐ Usar Open3D o simulador de robot interactivo
+      ☐ Incluir al menos un objeto real
+      ☐ Incluir al menos un robot virtual
+
+    2.2 Deteccion, seguimiento y correspondencias - 2 puntos:
+      ☐ Detectar y seguir puntos de interes de objetos reales en las imagenes
+      ☐ Resolver correspondencias entre camaras
+      ☐ Empezar con solucion manual mediante raton si hace falta
+      ☐ Automatizar despues con OpenCV, YOLO, MediaPipe o ZED2
+
+    2.3 Posicionamiento 3D, visor y realidad aumentada - 2 puntos:
+      ☐ Posicionar puntos de interes respecto a un sistema 3D de referencia del mundo
+      ☐ Calibrar camaras con precision
+      ☐ Reportar indicador de error de calibracion
+      ☐ Incluir imagenes de calibracion
+      ☐ Aplicar estereovision con buena configuracion de camaras
+      ☐ Actualizar continuamente objetos reales en movimiento dentro del visor virtual
+      ☐ Proyectar objetos y/o robots virtuales sobre imagenes de una camara para realidad aumentada
+
+    2.4 Interfaz humano-maquina basada en vision 3D - 2 puntos:
+      ☐ Seguir dos puntos de interes de al menos una persona
+      ☐ Usar YOLO, MediaPipe o ZED2 si es posible
+      ☐ Si no se puede, usar marcadores sobre esos puntos humanos
+      ☐ Desarrollar clasificador de gestos con conjunto finito de gestos
+      ☐ Usar posiciones relativas de los puntos para actuar sobre objetos virtuales
+
+    2.5 Aplicacion 3D integrada y eficiente - 2 puntos:
+      ☐ Integrar toda la funcionalidad anterior en una aplicacion 3D
+      ☐ Usar procesamiento paralelo multihilo o distribuido
+      ☐ Preparar una demo tipo humano-robot-objeto real/virtual
+      ☐ Ejemplo aplicable: humano mueve herramienta/objeto real y robot virtual reacciona
+      ☐ Mostrar interaccion con gestos: detener, continuar, pausar u otra accion
+
+    Checklist final antes de entregar:
+      ☐ Hay evidencia clara de cada bloque 2.1, 2.2, 2.3, 2.4 y 2.5
+      ☐ La memoria separa que parte hace este proyecto y que parte hace RoboDK/companero
+      ☐ La demo no depende de pasos manuales no documentados
+      ☐ Los criterios de la rubrica aparecen reflejados en capturas, videos o resultados

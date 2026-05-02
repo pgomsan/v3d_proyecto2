@@ -1,0 +1,10 @@
+.venv/
+__pycache__/
+*.pyc
+.DS_Store
+
+calibration/*.npy
+calibration/*.npz
+state/logs/*.jsonl
+data/recordings/*
+!data/recordings/.gitkeep

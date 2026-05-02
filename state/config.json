@@ -1,0 +1,92 @@
+{
+  "project_title": "Pose de herramienta con marcas de color",
+  "authors": [],
+  "camera_index": 1,
+  "camera": {
+    "width": 1280,
+    "height": 720,
+    "fps": 30
+  },
+  "cameras": {
+    "left": {
+      "index": 1,
+      "name": "left",
+      "width": 1280,
+      "height": 720,
+      "fps": 30
+    },
+    "right": {
+      "index": 0,
+      "name": "right",
+      "width": 1280,
+      "height": 720,
+      "fps": 30
+    }
+  },
+  "tool": {
+    "tool_id": "bisturi_01",
+    "tool_type": "bisturi",
+    "length_cm": null,
+    "marker_distance_cm": null,
+    "tip_offset_cm": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "marker_a_color": "red",
+    "marker_b_color": "blue",
+    "marker_radius_cm": null
+  },
+  "color_detection": {
+    "marker_a_hsv_lower": [
+      0,
+      0,
+      0
+    ],
+    "marker_a_hsv_upper": [
+      0,
+      0,
+      0
+    ],
+    "marker_b_hsv_lower": [
+      0,
+      0,
+      0
+    ],
+    "marker_b_hsv_upper": [
+      0,
+      0,
+      0
+    ]
+  },
+  "gestures": {
+    "enabled": true,
+    "backend": "mediapipe",
+    "command_mapping": {
+      "open_hand": "stop",
+      "closed_fist": "continue",
+      "two_fingers": "pause",
+      "unknown": "none"
+    }
+  },
+  "robodk_handoff": {
+    "enabled": true,
+    "output_frame": "camera",
+    "tool_id": "bisturi_01",
+    "owner": "companion_project"
+  },
+  "calibration": {
+    "camera_matrix_left_path": "calibration/K_left.npy",
+    "distortion_left_path": "calibration/dist_left.npy",
+    "camera_matrix_right_path": "calibration/K_right.npy",
+    "distortion_right_path": "calibration/dist_right.npy",
+    "stereo_calibration_path": "calibration/stereo.npz",
+    "homography_path": "calibration/H.npy"
+  },
+  "persistence": {
+    "last_pose_path": "state/last_pose.json",
+    "last_gesture_path": "state/last_gesture.json",
+    "pose_log_path": "state/logs/poses.jsonl",
+    "gesture_log_path": "state/logs/gestures.jsonl"
+  }
+}
