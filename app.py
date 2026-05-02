@@ -15,7 +15,11 @@ from calibration.capture_calibration_images import capture_calibration_images
 from calibration.homography import compute_homography
 from calibration.select_points import select_points
 from main_gestures import preview_gesture_detection, run_gesture_detection
-from main_pose import preview_marker_detection, run_pose_and_gestures, run_pose_estimation
+from main_pose import (
+    preview_marker_detection,
+    run_pose_and_gestures,
+    run_pose_estimation,
+)
 from vision.camera import find_available_cameras, preview_camera
 
 
@@ -117,7 +121,9 @@ MENU_ITEMS = [
     MenuItem("Buscar y elegir camaras", lambda: choose_cameras()),
     MenuItem("Configurar herramienta", lambda: configure_tool()),
     MenuItem("Configurar comandos de gestos", lambda: configure_gesture_commands()),
-    MenuItem("Capturar imagenes de calibracion", capture_calibration_images, pending=True),
+    MenuItem(
+        "Capturar imagenes de calibracion", capture_calibration_images, pending=True
+    ),
     MenuItem("Calibrar camaras", calibrate_camera, pending=True),
     MenuItem("Seleccionar 4 puntos del plano", select_points, pending=True),
     MenuItem("Calcular homografia", compute_homography, pending=True),
@@ -132,117 +138,85 @@ MENU_ITEMS = [
 ]
 
 
-CROSS_FRAMES = [
+MEDICAL_FRAMES = [
     [
-        "             ▄██████▄             ",
-        "             ████████▓▓           ",
-        "             ████████▓▓           ",
-        "      ▄████████████████████▄      ",
-        "      ██████████████████████▓▓    ",
-        "      ██████████████████████▓▓    ",
-        "      ▀████████████████████▀▒▒    ",
-        "             ████████▓▓           ",
-        "             ████████▓▓           ",
-        "             ▀██████▀▒▒           ",
+        "                                  ",
+        "              ██████              ",
+        "              ██████              ",
+        "              ██████              ",
+        "        ██████████████████        ",
+        "        ██████████████████        ",
+        "        ██████████████████        ",
+        "              ██████              ",
+        "              ██████              ",
+        "              ██████              ",
         "          ░░░░░░░░░░░░░░          ",
+        "                                  ",
     ],
     [
-        "               ▄█████▄▓           ",
-        "              ███████▓▓▒          ",
-        "             ███████▓▓▒           ",
-        "        ▄███████████▓▓▓▓▄         ",
-        "      ▄█████████████████▓▓▒       ",
-        "        ███████████████▓▓▓▒       ",
-        "        ▀███████████▓▓▓▓▀▒        ",
-        "             ███████▓▓▒           ",
-        "              ███████▓▓▒          ",
-        "               ▀█████▀▒           ",
-        "           ░░░░░░░░░░░░           ",
-    ],
-    [
-        "                  ▄██▄            ",
-        "                ▄████▓            ",
-        "               █████▓▒            ",
-        "         ▄█████████▓▓▒            ",
-        "       ▄███████████▓▓▒            ",
-        "       ████████████▓▓▒            ",
-        "         ▀█████████▓▓▒            ",
-        "               █████▓▒            ",
-        "                ▀████▓            ",
-        "                  ▀██▀            ",
-        "             ░░░░░░░░             ",
-    ],
-    [
-        "            ▓▄█████▄              ",
-        "           ▒▓▓███████             ",
-        "            ▒▓▓███████            ",
-        "        ▄▓▓▓▓███████████▄         ",
-        "      ▒▓▓█████████████████▄       ",
-        "      ▒▓▓▓███████████████         ",
-        "       ▒▀▓▓▓▓███████████▀         ",
-        "            ▒▓▓███████            ",
-        "           ▒▓▓███████             ",
-        "           ▒▀█████▀               ",
-        "           ░░░░░░░░░░░░           ",
-    ],
-    [
-        "           ▓▓▄██████▄             ",
-        "           ▓▓████████             ",
-        "           ▓▓████████             ",
-        "      ▄████████████████████▄      ",
-        "    ▓▓██████████████████████      ",
-        "    ▓▓██████████████████████      ",
-        "    ▒▒▀████████████████████▀      ",
-        "           ▓▓████████             ",
-        "           ▓▓████████             ",
-        "           ▒▒▀██████▀             ",
+        "                                  ",
+        "              ▓█████              ",
+        "              ▓█████              ",
+        "              ▓█████              ",
+        "        ▓▓████████████████        ",
+        "        ▓▓████████████████        ",
+        "        ▓▓████████████████        ",
+        "              ▓█████              ",
+        "              ▓█████              ",
+        "              ▓█████              ",
         "          ░░░░░░░░░░░░░░          ",
+        "                                  ",
     ],
     [
-        "           ▓▄█████▄               ",
-        "          ▒▓▓███████              ",
-        "           ▒▓▓███████             ",
-        "         ▄▓▓▓▓███████████▄        ",
-        "       ▒▓▓█████████████████▄      ",
-        "       ▒▓▓▓███████████████        ",
-        "        ▒▀▓▓▓▓███████████▀        ",
-        "           ▒▓▓███████             ",
-        "          ▒▓▓███████              ",
-        "           ▒▀█████▀               ",
-        "           ░░░░░░░░░░░░           ",
+        "                                  ",
+        "              ██████              ",
+        "              ██████              ",
+        "              ██████              ",
+        "        ██████████████████        ",
+        "        ██████████████████        ",
+        "        ██████████████████        ",
+        "              ██████              ",
+        "              ██████              ",
+        "              ██████              ",
+        "          ░░░░░░░░░░░░░░          ",
+        "                                  ",
     ],
     [
-        "            ▄██▄                  ",
-        "            ▓████▄                ",
-        "            ▒▓█████               ",
-        "            ▒▓▓█████████▄         ",
-        "            ▒▓▓███████████▄       ",
-        "            ▒▓▓████████████       ",
-        "            ▒▓▓█████████▀         ",
-        "            ▒▓█████               ",
-        "            ▓████▀                ",
-        "            ▀██▀                  ",
-        "             ░░░░░░░░             ",
+        "                                  ",
+        "              █████▓              ",
+        "              █████▓              ",
+        "              █████▓              ",
+        "        ████████████████▓▓        ",
+        "        ████████████████▓▓        ",
+        "        ████████████████▓▓        ",
+        "              █████▓              ",
+        "              █████▓              ",
+        "              █████▓              ",
+        "          ░░░░░░░░░░░░░░          ",
+        "                                  ",
     ],
     [
-        "           ▓█████▄                ",
-        "          ▒▓▓███████              ",
-        "           ▒▓▓███████             ",
-        "         ▄▓▓▓▓███████████▄        ",
-        "       ▒▓▓█████████████████▄      ",
-        "       ▒▓▓▓███████████████        ",
-        "        ▒▀▓▓▓▓███████████▀        ",
-        "           ▒▓▓███████             ",
-        "          ▒▓▓███████              ",
-        "           ▒▀█████▀               ",
-        "           ░░░░░░░░░░░░           ",
+        "                                  ",
+        "              ██████              ",
+        "              ██████              ",
+        "              ██████              ",
+        "        ██████████████████        ",
+        "        ██████████████████        ",
+        "        ██████████████████        ",
+        "              ██████              ",
+        "              ██████              ",
+        "              ██████              ",
+        "          ░░░░░░░░░░░░░░          ",
+        "                                  ",
     ],
 ]
-CROSS_CANVAS_WIDTH = max(len(line) for frame in CROSS_FRAMES for line in frame)
-CROSS_CANVAS_HEIGHT = max(len(frame) for frame in CROSS_FRAMES)
+MEDICAL_CANVAS_WIDTH = max(len(line) for frame in MEDICAL_FRAMES for line in frame)
+MEDICAL_CANVAS_HEIGHT = max(len(frame) for frame in MEDICAL_FRAMES)
 
 
-def _merge_defaults(defaults: dict[str, Any], current: dict[str, Any]) -> dict[str, Any]:
+def _merge_defaults(
+    defaults: dict[str, Any], current: dict[str, Any]
+) -> dict[str, Any]:
     merged = copy.deepcopy(defaults)
     for key, value in current.items():
         if isinstance(value, dict) and isinstance(merged.get(key), dict):
@@ -287,7 +261,7 @@ def save_config(config: dict[str, Any]) -> None:
 
 def wrap_prefixed_text(prefix: str, content: str, width: int) -> list[str]:
     if width <= len(prefix) + 1:
-        return [f"{prefix}{content[:max(0, width - len(prefix))]}"]
+        return [f"{prefix}{content[: max(0, width - len(prefix))]}"]
 
     wrapped = textwrap.wrap(
         content,
@@ -316,10 +290,18 @@ def show_last_saved_data() -> None:
     calibration_info = load_json(CALIBRATION_INFO_PATH, {})
 
     print("\n--- Ultima pose ---")
-    print(json.dumps(last_pose, indent=2, ensure_ascii=False) if last_pose else "No hay pose guardada.")
+    print(
+        json.dumps(last_pose, indent=2, ensure_ascii=False)
+        if last_pose
+        else "No hay pose guardada."
+    )
 
     print("\n--- Ultimo gesto/comando ---")
-    print(json.dumps(last_gesture, indent=2, ensure_ascii=False) if last_gesture else "No hay gesto guardado.")
+    print(
+        json.dumps(last_gesture, indent=2, ensure_ascii=False)
+        if last_gesture
+        else "No hay gesto guardado."
+    )
 
     print("\n--- Estado de calibracion ---")
     print(
@@ -373,7 +355,9 @@ def _prompt_keep_vector(label: str, current: list[float]) -> list[float]:
         return current
 
     if len(values) != 3:
-        print("Vector no valido. Usa exactamente tres valores. Se mantiene el anterior.")
+        print(
+            "Vector no valido. Usa exactamente tres valores. Se mantiene el anterior."
+        )
         return current
     return values
 
@@ -395,17 +379,31 @@ def choose_cameras() -> None:
     if available:
         print("Indices disponibles:", ", ".join(str(index) for index in available))
     else:
-        print("No se ha detectado ninguna camara automaticamente. Puedes escribir indices manualmente.")
+        print(
+            "No se ha detectado ninguna camara automaticamente. Puedes escribir indices manualmente."
+        )
 
     print("\nDeja un campo vacio para mantener el valor actual.")
-    left["index"] = _prompt_keep_int("Indice camara izquierda", int(left.get("index", 0)))
-    right["index"] = _prompt_keep_int("Indice camara derecha", int(right.get("index", 1)))
+    left["index"] = _prompt_keep_int(
+        "Indice camara izquierda", int(left.get("index", 0))
+    )
+    right["index"] = _prompt_keep_int(
+        "Indice camara derecha", int(right.get("index", 1))
+    )
     left["name"] = "left"
     right["name"] = "right"
 
-    width = _prompt_keep_int("Ancho de captura comun", int(shared_camera.get("width", left.get("width", 1280))))
-    height = _prompt_keep_int("Alto de captura comun", int(shared_camera.get("height", left.get("height", 720))))
-    fps = _prompt_keep_int("FPS comun", int(shared_camera.get("fps", left.get("fps", 30))))
+    width = _prompt_keep_int(
+        "Ancho de captura comun",
+        int(shared_camera.get("width", left.get("width", 1280))),
+    )
+    height = _prompt_keep_int(
+        "Alto de captura comun",
+        int(shared_camera.get("height", left.get("height", 720))),
+    )
+    fps = _prompt_keep_int(
+        "FPS comun", int(shared_camera.get("fps", left.get("fps", 30)))
+    )
 
     shared_camera.update({"width": width, "height": height, "fps": fps})
     left.update({"width": width, "height": height, "fps": fps})
@@ -421,17 +419,31 @@ def configure_tool() -> None:
     tool = config.setdefault("tool", {})
 
     print("\nDeja un campo vacio para mantener el valor actual.")
-    tool["tool_id"] = _prompt_keep_text("ID de herramienta", tool.get("tool_id", "bisturi_01"))
-    tool["tool_type"] = _prompt_keep_text("Tipo de herramienta", tool.get("tool_type", "bisturi"))
-    tool["length_cm"] = _prompt_keep_float_or_none("Longitud total en cm", tool.get("length_cm"))
+    tool["tool_id"] = _prompt_keep_text(
+        "ID de herramienta", tool.get("tool_id", "bisturi_01")
+    )
+    tool["tool_type"] = _prompt_keep_text(
+        "Tipo de herramienta", tool.get("tool_type", "bisturi")
+    )
+    tool["length_cm"] = _prompt_keep_float_or_none(
+        "Longitud total en cm", tool.get("length_cm")
+    )
     tool["marker_distance_cm"] = _prompt_keep_float_or_none(
         "Distancia entre marcas en cm",
         tool.get("marker_distance_cm"),
     )
-    tool["marker_radius_cm"] = _prompt_keep_float_or_none("Radio de marca en cm", tool.get("marker_radius_cm"))
-    tool["tip_offset_cm"] = _prompt_keep_vector("Offset hasta punta util x,y,z cm", tool.get("tip_offset_cm", [0, 0, 0]))
-    tool["marker_a_color"] = _prompt_keep_text("Color marca A", tool.get("marker_a_color", "red"))
-    tool["marker_b_color"] = _prompt_keep_text("Color marca B", tool.get("marker_b_color", "blue"))
+    tool["marker_radius_cm"] = _prompt_keep_float_or_none(
+        "Radio de marca en cm", tool.get("marker_radius_cm")
+    )
+    tool["tip_offset_cm"] = _prompt_keep_vector(
+        "Offset hasta punta util x,y,z cm", tool.get("tip_offset_cm", [0, 0, 0])
+    )
+    tool["marker_a_color"] = _prompt_keep_text(
+        "Color marca A", tool.get("marker_a_color", "red")
+    )
+    tool["marker_b_color"] = _prompt_keep_text(
+        "Color marca B", tool.get("marker_b_color", "blue")
+    )
 
     config.setdefault("robodk_handoff", {})["tool_id"] = tool["tool_id"]
     save_config(config)
@@ -444,10 +456,18 @@ def configure_gesture_commands() -> None:
     mapping = gestures.setdefault("command_mapping", {})
 
     print("\nDeja un campo vacio para mantener el valor actual.")
-    mapping["open_hand"] = _prompt_keep_text("Comando para open_hand", mapping.get("open_hand", "stop"))
-    mapping["closed_fist"] = _prompt_keep_text("Comando para closed_fist", mapping.get("closed_fist", "continue"))
-    mapping["two_fingers"] = _prompt_keep_text("Comando para two_fingers", mapping.get("two_fingers", "pause"))
-    mapping["unknown"] = _prompt_keep_text("Comando para unknown", mapping.get("unknown", "none"))
+    mapping["open_hand"] = _prompt_keep_text(
+        "Comando para open_hand", mapping.get("open_hand", "stop")
+    )
+    mapping["closed_fist"] = _prompt_keep_text(
+        "Comando para closed_fist", mapping.get("closed_fist", "continue")
+    )
+    mapping["two_fingers"] = _prompt_keep_text(
+        "Comando para two_fingers", mapping.get("two_fingers", "pause")
+    )
+    mapping["unknown"] = _prompt_keep_text(
+        "Comando para unknown", mapping.get("unknown", "none")
+    )
     save_config(config)
     print("Mapa de gestos guardado.")
 
@@ -465,7 +485,9 @@ def _safe_addstr(stdscr, row: int, col: int, text: str, attr: int = 0) -> None:
         pass
 
 
-def _draw_panel(stdscr, panel_y: int, panel_x: int, panel_height: int, panel_width: int) -> None:
+def _draw_panel(
+    stdscr, panel_y: int, panel_x: int, panel_height: int, panel_width: int
+) -> None:
     border_attr = curses.color_pair(5)
     for x in range(panel_x, panel_x + panel_width):
         _safe_addstr(stdscr, panel_y, x, " ", border_attr)
@@ -475,29 +497,30 @@ def _draw_panel(stdscr, panel_y: int, panel_x: int, panel_height: int, panel_wid
         _safe_addstr(stdscr, y, panel_x + panel_width - 1, " ", border_attr)
 
 
-def _cross_char_attr(char: str) -> int:
+def _medical_char_attr(char: str) -> int:
     if char in {"█", "▄", "▀"}:
         return curses.color_pair(6) | curses.A_BOLD
-    if char == "▓":
+    if char in {"▓", "▒"}:
         return curses.color_pair(7) | curses.A_BOLD
-    if char == "▒":
-        return curses.color_pair(7)
     if char == "░":
         return curses.color_pair(9)
     return curses.color_pair(8) | curses.A_BOLD
 
 
-def _draw_rotating_cross(stdscr, row: int, col: int, frame_index: int, max_width: int) -> int:
-    frame = CROSS_FRAMES[frame_index % len(CROSS_FRAMES)]
-    for y_offset in range(CROSS_CANVAS_HEIGHT):
+def _draw_medical_art(
+    stdscr, row: int, col: int, frame_index: int, max_width: int
+) -> int:
+    frame = MEDICAL_FRAMES[frame_index % len(MEDICAL_FRAMES)]
+    for y_offset in range(MEDICAL_CANVAS_HEIGHT):
         line = frame[y_offset] if y_offset < len(frame) else ""
         for x_offset, char in enumerate(line[:max_width]):
             if char == " ":
                 continue
-            _safe_addstr(stdscr, row + y_offset, col + x_offset, char, _cross_char_attr(char))
+            _safe_addstr(
+                stdscr, row + y_offset, col + x_offset, char, _medical_char_attr(char)
+            )
 
-    _safe_addstr(stdscr, row + 1, col + max(0, min(max_width - 4, CROSS_CANVAS_WIDTH - 6)), "3D", curses.color_pair(3) | curses.A_BOLD)
-    return CROSS_CANVAS_WIDTH
+    return MEDICAL_CANVAS_WIDTH
 
 
 def draw_menu(stdscr, selected_idx: int, frame_index: int) -> None:
@@ -514,8 +537,12 @@ def draw_menu(stdscr, selected_idx: int, frame_index: int) -> None:
     left_camera = cameras.get("left", {})
     right_camera = cameras.get("right", {})
     author_text = ", ".join(authors) if authors else "Por definir"
-    tool_text = f"{tool.get('tool_id', 'bisturi_01')} ({tool.get('tool_type', 'bisturi')})"
-    marker_text = f"{tool.get('marker_a_color', 'red')} -> {tool.get('marker_b_color', 'blue')}"
+    tool_text = (
+        f"{tool.get('tool_id', 'bisturi_01')} ({tool.get('tool_type', 'bisturi')})"
+    )
+    marker_text = (
+        f"{tool.get('marker_a_color', 'red')} -> {tool.get('marker_b_color', 'blue')}"
+    )
     camera_text = f"L={left_camera.get('index', 0)} / R={right_camera.get('index', 1)}"
     command_text = (
         f"open={mapping.get('open_hand', 'stop')}, "
@@ -531,8 +558,8 @@ def draw_menu(stdscr, selected_idx: int, frame_index: int) -> None:
 
     art_x = panel_x + 4
     art_y = panel_y + 3
-    max_art_width = min(CROSS_CANVAS_WIDTH, panel_width - 8)
-    art_width = _draw_rotating_cross(stdscr, art_y, art_x, frame_index, max_art_width)
+    max_art_width = min(MEDICAL_CANVAS_WIDTH, panel_width - 8)
+    art_width = _draw_medical_art(stdscr, art_y, art_x, frame_index, max_art_width)
 
     text_x = art_x + min(art_width, max_art_width) + 4
     text_width = panel_x + panel_width - 4 - text_x
@@ -540,7 +567,7 @@ def draw_menu(stdscr, selected_idx: int, frame_index: int) -> None:
         text_x = panel_x + 4
         text_width = panel_width - 8
         art_y = panel_y + 2
-        title_y = art_y + CROSS_CANVAS_HEIGHT + 1
+        title_y = art_y + MEDICAL_CANVAS_HEIGHT + 1
     else:
         title_y = art_y + 1
 
@@ -558,12 +585,16 @@ def draw_menu(stdscr, selected_idx: int, frame_index: int) -> None:
     ]
 
     for offset, line in enumerate(meta_lines):
-        _safe_addstr(stdscr, meta_y + offset, text_x, line[:text_width], curses.color_pair(3))
+        _safe_addstr(
+            stdscr, meta_y + offset, text_x, line[:text_width], curses.color_pair(3)
+        )
 
-    divider_y = max(art_y + CROSS_CANVAS_HEIGHT, meta_y + len(meta_lines)) + 1
+    divider_y = max(art_y + MEDICAL_CANVAS_HEIGHT, meta_y + len(meta_lines)) + 1
     divider_width = panel_width - 8
     divider = ("=" * divider_width)[:divider_width]
-    _safe_addstr(stdscr, divider_y, panel_x + 4, divider, curses.color_pair(10) | curses.A_BOLD)
+    _safe_addstr(
+        stdscr, divider_y, panel_x + 4, divider, curses.color_pair(10) | curses.A_BOLD
+    )
 
     start_row = divider_y + 2
     visible_rows = max(1, panel_y + panel_height - 3 - start_row)
@@ -581,19 +612,41 @@ def draw_menu(stdscr, selected_idx: int, frame_index: int) -> None:
         label = item.label.ljust(item_width)
 
         if idx == selected_idx:
-            _safe_addstr(stdscr, row, marker_x, ">", curses.color_pair(6) | curses.A_BOLD)
-            _safe_addstr(stdscr, row, label_x, label, curses.color_pair(2) | curses.A_BOLD)
+            _safe_addstr(
+                stdscr, row, marker_x, ">", curses.color_pair(6) | curses.A_BOLD
+            )
+            _safe_addstr(
+                stdscr, row, label_x, label, curses.color_pair(2) | curses.A_BOLD
+            )
         else:
             _safe_addstr(stdscr, row, marker_x, " ", curses.color_pair(4))
             _safe_addstr(stdscr, row, label_x, label, curses.color_pair(4))
 
     if scroll_offset > 0:
-        _safe_addstr(stdscr, start_row - 1, panel_x + panel_width - 10, "arriba", curses.color_pair(3))
+        _safe_addstr(
+            stdscr,
+            start_row - 1,
+            panel_x + panel_width - 10,
+            "arriba",
+            curses.color_pair(3),
+        )
     if scroll_offset + visible_rows < len(MENU_ITEMS):
-        _safe_addstr(stdscr, panel_y + panel_height - 3, panel_x + panel_width - 10, "abajo", curses.color_pair(3))
+        _safe_addstr(
+            stdscr,
+            panel_y + panel_height - 3,
+            panel_x + panel_width - 10,
+            "abajo",
+            curses.color_pair(3),
+        )
 
     footer = "[Enter] abrir   [q/Esc] salir"
-    _safe_addstr(stdscr, panel_y + panel_height - 2, panel_x + 4, footer[: panel_width - 8], curses.color_pair(3))
+    _safe_addstr(
+        stdscr,
+        panel_y + panel_height - 2,
+        panel_x + 4,
+        footer[: panel_width - 8],
+        curses.color_pair(3),
+    )
     stdscr.refresh()
 
 
@@ -603,35 +656,35 @@ def curses_menu(stdscr) -> str:
     curses.use_default_colors()
     stdscr.timeout(90)
 
-    red_color = curses.COLOR_RED
-    dark_red_color = curses.COLOR_MAGENTA
-    shadow_color = curses.COLOR_BLUE
+    medical_color = curses.COLOR_RED
+    dark_medical_color = curses.COLOR_MAGENTA
+    shadow_color = curses.COLOR_MAGENTA
     if curses.can_change_color():
         try:
             curses.init_color(20, 1000, 0, 0)
             curses.init_color(21, 520, 0, 0)
-            curses.init_color(22, 180, 0, 0)
-            red_color = 20
-            dark_red_color = 21
+            curses.init_color(22, 260, 0, 0)
+            medical_color = 20
+            dark_medical_color = 21
             shadow_color = 22
         except curses.error:
-            red_color = curses.COLOR_RED
-            dark_red_color = curses.COLOR_MAGENTA
-            shadow_color = curses.COLOR_BLUE
+            medical_color = curses.COLOR_RED
+            dark_medical_color = curses.COLOR_MAGENTA
+            shadow_color = curses.COLOR_MAGENTA
 
     curses.init_pair(2, curses.COLOR_WHITE, -1)
     curses.init_pair(3, curses.COLOR_CYAN, -1)
     curses.init_pair(4, curses.COLOR_WHITE, -1)
     curses.init_pair(5, curses.COLOR_BLUE, -1)
-    curses.init_pair(6, red_color, -1)
-    curses.init_pair(7, dark_red_color, -1)
+    curses.init_pair(6, medical_color, -1)
+    curses.init_pair(7, dark_medical_color, -1)
     curses.init_pair(8, curses.COLOR_WHITE, -1)
     curses.init_pair(9, shadow_color, -1)
-    curses.init_pair(10, red_color, -1)
+    curses.init_pair(10, medical_color, -1)
 
     selected_idx = 0
     while True:
-        frame_index = int(time.monotonic() * 7) % len(CROSS_FRAMES)
+        frame_index = int(time.monotonic() * 3) % len(MEDICAL_FRAMES)
         draw_menu(stdscr, selected_idx, frame_index)
         key = stdscr.getch()
 
@@ -688,7 +741,9 @@ def run_menu_action(option: str) -> bool:
     try:
         selected.action()
         if selected.pending:
-            print("Esqueleto preparado. Completa esta funcion en su modulo correspondiente.")
+            print(
+                "Esqueleto preparado. Completa esta funcion en su modulo correspondiente."
+            )
     except FileNotFoundError as exc:
         print(exc)
     except Exception as exc:
