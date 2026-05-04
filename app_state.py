@@ -59,6 +59,8 @@ DEFAULT_CONFIG: dict[str, Any] = {
         "marker_b_hsv_upper": [0, 0, 0],
     },
     "calibration": {
+        "chessboard_pattern_size": [7, 7],
+        "chessboard_square_size": 2.1,
         "camera_matrix_left_path": "calibration/K_left.npy",
         "distortion_left_path": "calibration/dist_left.npy",
         "camera_matrix_right_path": "calibration/K_right.npy",

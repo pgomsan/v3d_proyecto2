@@ -90,6 +90,8 @@ DEFAULT_CONFIG: dict[str, Any] = {
         "owner": "companion_project",
     },
     "calibration": {
+        "chessboard_pattern_size": [7, 7],
+        "chessboard_square_size": 2.1,
         "camera_matrix_left_path": "calibration/K_left.npy",
         "distortion_left_path": "calibration/dist_left.npy",
         "camera_matrix_right_path": "calibration/K_right.npy",
@@ -122,7 +124,7 @@ MENU_ITEMS = [
     MenuItem("Configurar herramienta", lambda: configure_tool()),
     MenuItem("Configurar comandos de gestos", lambda: configure_gesture_commands()),
     MenuItem("Capturar imagenes de calibracion", capture_calibration_images),
-    MenuItem("Calibrar camaras", calibrate_camera, pending=True),
+    MenuItem("Calibrar camaras", calibrate_camera),
     MenuItem("Seleccionar 4 puntos del plano", select_points, pending=True),
     MenuItem("Calcular homografia", compute_homography, pending=True),
     MenuItem("Probar deteccion de marcas", preview_marker_detection, pending=True),

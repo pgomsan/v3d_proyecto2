@@ -52,17 +52,17 @@ Tracker 3D - guia de trabajo:
   3. Captura de pares para calibracion:
     Objetivo: guardar pares left/right ordenados y reutilizables.
     Archivo a implementar: calibration/capture_calibration_images.py
-    ☐ Abrir camara izquierda y derecha usando CameraSource @alta
-    ☐ Mostrar ambas imagenes en pantalla
-    ☐ Guardar pares con mismo indice: `left_0001.png` y `right_0001.png`
-    ☐ Guardar las imagenes en `data/calibration_images/`
+    ✔ Abrir camara izquierda y derecha usando CameraSource @alta @done(26-05-04 19:21)
+    ✔ Mostrar ambas imagenes en pantalla @done(26-05-04 19:21)
+    ✔ Guardar pares con mismo indice: `left_0001.png` y `right_0001.png` @done(26-05-04 19:22)
+    ✔ Guardar las imagenes en `data/calibration_images/` @done(26-05-04 19:22)
     ☐ Guardar timestamp de cada par en un JSON o CSV
-    ☐ Evitar guardar una imagen si alguna camara falla
-    ☐ Capturar al menos 15-25 pares con el patron en distintas posiciones
+    ✔ Evitar guardar una imagen si alguna camara falla @done(26-05-04 19:22)
+    ✔ Capturar al menos 15-25 pares con el patron en distintas posiciones @done(26-05-04 19:22)
     Criterio de terminado:
-      ☐ Existen pares left/right con indices coincidentes
-      ☐ El patron se ve completo en ambas camaras en la mayoria de pares
-      ☐ Hay suficiente variedad de angulos y posiciones
+      ✔ Existen pares left/right con indices coincidentes @done(26-05-04 19:22)
+      ✔ El patron se ve completo en ambas camaras en la mayoria de pares @done(26-05-04 19:22)
+      ✔ Hay suficiente variedad de angulos y posiciones @done(26-05-04 19:22)
 
   4. Calibracion individual:
     Objetivo: obtener intrinsecos y distorsion de cada camara.
@@ -73,29 +73,29 @@ Tracker 3D - guia de trabajo:
       - calibration/K_right.npy
       - calibration/dist_right.npy
       - state/calibration_info.json
-    ☐ Elegir patron: chessboard, Charuco o circulos @alta
-    ☐ Definir tamano real del cuadrado o patron
-    ☐ Detectar esquinas/puntos en imagenes left
-    ☐ Detectar esquinas/puntos en imagenes right
-    ☐ Ejecutar `cv2.calibrateCamera` para izquierda
-    ☐ Ejecutar `cv2.calibrateCamera` para derecha
-    ☐ Guardar matrices y distorsion en calibration/
-    ☐ Guardar error de reproyeccion en state/calibration_info.json
-    ☐ Repetir capturas si el error es alto o hay pocas detecciones validas
+    ✔ Elegir patron: chessboard, Charuco o circulos @alta @done(26-05-04 19:34)
+    ✔ Definir tamano real del cuadrado o patron @done(26-05-04 19:56)
+    ✔ Detectar esquinas/puntos en imagenes left @done(26-05-04 19:56)
+    ✔ Detectar esquinas/puntos en imagenes right @done(26-05-04 19:56)
+    ✔ Ejecutar `cv2.calibrateCamera` para izquierda @done(26-05-04 19:56)
+    ✔ Ejecutar `cv2.calibrateCamera` para derecha @done(26-05-04 19:56)
+    ✔ Guardar matrices y distorsion en calibration/ @done(26-05-04 19:57)
+    ✔ Guardar error de reproyeccion en state/calibration_info.json @done(26-05-04 19:57)
+    ✔ Repetir capturas si el error es alto o hay pocas detecciones validas @done(26-05-04 19:57)
     Criterio de terminado:
-      ☐ Los cuatro archivos `.npy` existen
-      ☐ La app puede cargar la calibracion sin error
-      ☐ El error de reproyeccion esta documentado
+      ✔ Los cuatro archivos `.npy` existen @done(26-05-04 19:59)
+      ✔ La app puede cargar la calibracion sin error @done(26-05-04 19:59)
+      ✔ El error de reproyeccion esta documentado @done(26-05-04 19:59)
 
   5. Calibracion estereo:
     Objetivo: obtener relacion geometrica entre las dos camaras.
     Archivo a implementar: calibration/camera_calibration.py o nuevo modulo stereo_calibration.py
     Salida esperada:
       - calibration/stereo.npz
-    ☐ Usar solo pares donde el patron se detecta en ambas camaras @alta
-    ☐ Ejecutar `cv2.stereoCalibrate`
-    ☐ Guardar R, T, E, F y error estereo
-    ☐ Calcular matrices de rectificacion si se van a usar
+    ✔ Usar solo pares donde el patron se detecta en ambas camaras @alta @done(26-05-04 20:01)
+    ✔ Ejecutar `cv2.stereoCalibrate` @done(26-05-04 20:01)
+    ✔ Guardar R, T, E, F y error estereo @done(26-05-04 20:01)
+    ✔ Calcular matrices de rectificacion si se van a usar @done(26-05-04 20:01)
     ☐ Probar rectificacion visual con lineas horizontales
     ☐ Medir una distancia conocida y comparar reconstruccion
     Criterio de terminado:
