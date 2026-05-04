@@ -1,1 +1,8 @@
-{}
+{
+  "calibration_images_dir": "data/calibration_images",
+  "last_capture_pairs": 18,
+  "next_capture_index": 18,
+  "left_camera_index": 1,
+  "right_camera_index": 0,
+  "updated_at": "2026-05-04T19:21:01"
+}

@@ -37,10 +37,10 @@ Tracker 3D - guia de trabajo:
     Archivos recomendados: docs/arquitectura.md, docs/parametros_herramienta.md
     ✔ Decidir metodo 3D principal: estereo, homografia planar o mezcla de ambos @alta @done(26-05-02 20:48) 
     ☐ Definir sistema de referencia de salida: camara izquierda, mesa, centro estereo u otro
-    ☐ Decidir visor virtual: Open3D o RoboDK/simulador del companero
-    ☐ Definir que objeto real aparecera en el gemelo digital: bisturi/herramienta marcada
-    ☐ Definir que robot virtual aparecera en el gemelo digital
-    ☐ Definir punto que representa `position_cm`: centro entre marcas, marca A o punta del bisturi
+    ✔ Decidir visor virtual: Open3D o RoboDK/simulador del companero @done(26-05-04 18:54)
+    ✔ Definir que objeto real aparecera en el gemelo digital: bisturi/herramienta marcada @done(26-05-04 18:54)
+    ✔ Definir que robot virtual aparecera en el gemelo digital @done(26-05-04 18:54)
+    ✔ Definir punto que representa `position_cm`: centro entre marcas, marca A o punta del bisturi @done(26-05-04 18:57)
     ☐ Medir distancia real entre las dos marcas
     ☐ Medir offset desde el punto de referencia hasta la punta util del bisturi
     ☐ Definir colores de marca A y marca B

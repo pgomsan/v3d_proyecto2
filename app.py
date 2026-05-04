@@ -121,9 +121,7 @@ MENU_ITEMS = [
     MenuItem("Buscar y elegir camaras", lambda: choose_cameras()),
     MenuItem("Configurar herramienta", lambda: configure_tool()),
     MenuItem("Configurar comandos de gestos", lambda: configure_gesture_commands()),
-    MenuItem(
-        "Capturar imagenes de calibracion", capture_calibration_images, pending=True
-    ),
+    MenuItem("Capturar imagenes de calibracion", capture_calibration_images),
     MenuItem("Calibrar camaras", calibrate_camera, pending=True),
     MenuItem("Seleccionar 4 puntos del plano", select_points, pending=True),
     MenuItem("Calcular homografia", compute_homography, pending=True),

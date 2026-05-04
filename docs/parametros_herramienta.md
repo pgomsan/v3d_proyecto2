@@ -16,7 +16,7 @@ Parametros minimos a medir:
 
 ## Punto de referencia
 
-Antes de programar la pose conviene decidir que punto representa `position_cm`:
+Antes de programar la pose conviene decidir que punto representa `position_cm`: punta de la herramienta
 
 - centro entre las dos marcas;
 - marca A;
