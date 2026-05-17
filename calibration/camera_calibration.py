@@ -111,14 +111,57 @@ def _get_corners(image: np.ndarray, pattern_size: tuple[int, int]):
     return True, refined
 
 
+def _corner_order_candidates(
+    corners: np.ndarray, pattern_size: tuple[int, int]
+) -> list[tuple[str, np.ndarray]]:
+    """Genera ordenaciones posibles para tableros simetricos.
+
+    En un patron 7x7 no hay una esquina fisicamente distinguible. OpenCV puede
+    empezar a listar esquinas desde otro extremo en una camara y eso rompe la
+    correspondencia estereo aunque la calibracion individual sea correcta.
+    """
+    columns, rows = pattern_size
+    grid = corners.reshape(rows, columns, 1, 2)
+    candidates = [
+        ("id", grid),
+        ("flip_lr", grid[:, ::-1]),
+        ("flip_ud", grid[::-1, :]),
+        ("rot180", grid[::-1, ::-1]),
+    ]
+
+    if columns == rows:
+        transposed = np.transpose(grid, (1, 0, 2, 3))
+        candidates.extend(
+            [
+                ("transpose", transposed),
+                ("transpose_flip_lr", transposed[:, ::-1]),
+                ("transpose_flip_ud", transposed[::-1, :]),
+                ("transpose_rot180", transposed[::-1, ::-1]),
+            ]
+        )
+
+    return [(name, candidate.reshape(-1, 1, 2).copy()) for name, candidate in candidates]
+
+
 def _align_corner_order(
-    reference_corners: np.ndarray, candidate_corners: np.ndarray
+    reference_corners: np.ndarray,
+    candidate_corners: np.ndarray,
+    pattern_size: tuple[int, int],
 ) -> tuple[np.ndarray, bool]:
-    reference_axis = reference_corners[-1, 0] - reference_corners[0, 0]
-    candidate_axis = candidate_corners[-1, 0] - candidate_corners[0, 0]
-    if float(np.dot(reference_axis, candidate_axis)) < 0.0:
-        return candidate_corners[::-1].copy(), True
-    return candidate_corners, False
+    """Alinea el orden de esquinas de la derecha con la izquierda."""
+    best_name = "id"
+    best_corners = candidate_corners
+    best_score = float("inf")
+    reference_points = reference_corners[:, 0, :]
+
+    for name, corners in _corner_order_candidates(candidate_corners, pattern_size):
+        score = float(np.mean(np.linalg.norm(reference_points - corners[:, 0, :], axis=1)))
+        if score < best_score:
+            best_name = name
+            best_corners = corners
+            best_score = score
+
+    return best_corners, best_name != "id"
 
 
 def _collect_dataset(
@@ -163,7 +206,9 @@ def _collect_dataset(
             skipped_pairs.append(f"{index:02d}: tablero no detectado en ambas camaras")
             continue
 
-        right_corners, reordered = _align_corner_order(left_corners, right_corners)
+        right_corners, reordered = _align_corner_order(
+            left_corners, right_corners, pattern_size
+        )
         if reordered:
             reordered_pairs.append(index)
 
@@ -269,8 +314,19 @@ def calibrate_camera() -> None:
         )
     )
 
-    p_left = k_left_st @ np.hstack((np.eye(3), np.zeros((3, 1))))
-    p_right = k_right_st @ np.hstack((r_st, t_st))
+    r_left_rect, r_right_rect, p_left, p_right, q_matrix, roi_left, roi_right = (
+        cv.stereoRectify(
+            k_left_st,
+            dist_left_st,
+            k_right_st,
+            dist_right_st,
+            dataset.image_size,
+            r_st,
+            t_st,
+            flags=cv.CALIB_ZERO_DISPARITY,
+            alpha=0,
+        )
+    )
 
     k_left_path = _project_path(
         calibration.get("camera_matrix_left_path", "calibration/K_left.npy")
@@ -302,8 +358,13 @@ def calibrate_camera() -> None:
         T=t_st,
         E=e_st,
         F=f_st,
+        R_left_rect=r_left_rect,
+        R_right_rect=r_right_rect,
         P_left=p_left,
         P_right=p_right,
+        Q=q_matrix,
+        roi_left=np.array(roi_left),
+        roi_right=np.array(roi_right),
         K_left=k_left_st,
         dist_left=dist_left_st,
         K_right=k_right_st,

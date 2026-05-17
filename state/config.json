@@ -27,36 +27,36 @@
     "tool_id": "bisturi_01",
     "tool_type": "bisturi",
     "length_cm": null,
-    "marker_distance_cm": null,
+    "marker_distance_cm": 8.0,
     "tip_offset_cm": [
-      0.0,
+      -7.5,
       0.0,
       0.0
     ],
-    "marker_a_color": "red",
-    "marker_b_color": "blue",
+    "marker_a_color": "green",
+    "marker_b_color": "pink",
     "marker_radius_cm": null
   },
   "color_detection": {
     "marker_a_hsv_lower": [
-      0,
-      0,
-      0
+      55,
+      100,
+      60
     ],
     "marker_a_hsv_upper": [
-      0,
-      0,
-      0
+      88,
+      255,
+      255
     ],
     "marker_b_hsv_lower": [
-      0,
-      0,
-      0
+      145,
+      60,
+      80
     ],
     "marker_b_hsv_upper": [
-      0,
-      0,
-      0
+      179,
+      255,
+      255
     ]
   },
   "gestures": {

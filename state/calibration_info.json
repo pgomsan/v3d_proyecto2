@@ -1,20 +1,19 @@
 {
   "calibration_images_dir": "data/calibration_images",
-  "last_capture_pairs": 18,
-  "next_capture_index": 18,
+  "last_capture_pairs": 23,
+  "next_capture_index": 23,
   "left_camera_index": 1,
   "right_camera_index": 0,
-  "updated_at": "2026-05-04T19:58:08",
+  "updated_at": "2026-05-16T21:11:05",
   "method": "individual_intrinsics_plus_stereo_calibrate",
-  "valid_pairs": 12,
-  "total_pairs": 18,
+  "valid_pairs": 18,
+  "total_pairs": 23,
   "skipped_pairs": [
-    "05: tablero no detectado en ambas camaras",
-    "08: tablero no detectado en ambas camaras",
-    "11: tablero no detectado en ambas camaras",
-    "13: tablero no detectado en ambas camaras",
-    "14: tablero no detectado en ambas camaras",
-    "17: tablero no detectado en ambas camaras"
+    "02: tablero no detectado en ambas camaras",
+    "03: tablero no detectado en ambas camaras",
+    "09: tablero no detectado en ambas camaras",
+    "15: tablero no detectado en ambas camaras",
+    "16: tablero no detectado en ambas camaras"
   ],
   "pattern_size": [
     7,
@@ -25,17 +24,27 @@
     1280,
     720
   ],
-  "left_rms": 3.615062877354367,
-  "right_rms": 3.1955892000893065,
-  "left_mean_reprojection_error": 0.4489913928585679,
-  "right_mean_reprojection_error": 0.40771536162510547,
-  "stereo_rms": 3.7398572715784364,
+  "left_rms": 1.8273208647287345,
+  "right_rms": 1.910172659044329,
+  "left_mean_reprojection_error": 0.24543970322388667,
+  "right_mean_reprojection_error": 0.2527092388863306,
+  "stereo_rms": 2.167703274387957,
   "camera_matrix_left_path": "calibration/K_left.npy",
   "distortion_left_path": "calibration/dist_left.npy",
   "camera_matrix_right_path": "calibration/K_right.npy",
   "distortion_right_path": "calibration/dist_right.npy",
   "stereo_calibration_path": "calibration/stereo.npz",
   "reordered_pairs": [
-    15
+    0,
+    4,
+    5,
+    6,
+    10,
+    11,
+    13,
+    17,
+    18,
+    19,
+    20
   ]
 }

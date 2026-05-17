@@ -14,9 +14,19 @@ Parametros minimos a medir:
 - `marker_b_color`: color de la segunda marca.
 - `tip_offset_cm`: vector desde el punto de referencia estimado hasta la punta util de la herramienta.
 
+## Medidas actuales
+
+- Herramienta usada: boligrafo con marca verde y marca rosa.
+- `marker_distance_cm`: 8.0 cm entre la marca verde y la rosa.
+- `marker_a_color`: verde.
+- `marker_b_color`: rosa.
+- `tip_offset_cm`: `[-7.5, 0.0, 0.0]`, desde el centro entre marcas hasta la punta, en sentido contrario al vector verde -> rosa.
+- Rango HSV inicial para verde en OpenCV: `[55, 100, 60] -> [88, 255, 255]`.
+- Rango HSV inicial para rosa en OpenCV: `[145, 60, 80] -> [179, 255, 255]`.
+
 ## Punto de referencia
 
-Antes de programar la pose conviene decidir que punto representa `position_cm`: punta de la herramienta
+Antes de programar la pose conviene decidir que punto representa `position_cm`: punta de la herramienta.
 
 - centro entre las dos marcas;
 - marca A;
