@@ -18,6 +18,33 @@ Point2 = tuple[float, float]
 Point3 = tuple[float, float, float]
 
 
+def epipolar_error_px(left_px: Point2, right_px: Point2) -> float:
+    """Error vertical entre correspondencias de imagenes rectificadas."""
+    return abs(float(left_px[1]) - float(right_px[1]))
+
+
+def epipolar_errors_px(
+    correspondences: dict[str, tuple[Point2, Point2]],
+) -> dict[str, float]:
+    """Calcula el error epipolar de cada correspondencia identificada."""
+    return {
+        name: epipolar_error_px(left_px, right_px)
+        for name, (left_px, right_px) in correspondences.items()
+    }
+
+
+def epipolar_errors_are_valid(
+    errors_px: dict[str, float],
+    required_markers: tuple[str, ...],
+    max_error_px: float,
+) -> bool:
+    """Valida que existan todos los errores y no superen el umbral."""
+    return all(
+        marker in errors_px and errors_px[marker] <= max_error_px
+        for marker in required_markers
+    )
+
+
 @dataclass
 class StereoCalibration:
     p_left: Any

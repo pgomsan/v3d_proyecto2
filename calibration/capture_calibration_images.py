@@ -4,7 +4,11 @@ import re
 from pathlib import Path
 
 from app_state import save_calibration_info
-from vision.camera import CameraSource, load_stereo_camera_configs
+from vision.camera import (
+    CameraSource,
+    load_stereo_camera_configs,
+    read_stereo_pair,
+)
 
 try:
     import cv2
@@ -117,8 +121,7 @@ def capture_calibration_images() -> None:
         cv2.namedWindow("Calibracion derecha", cv2.WINDOW_NORMAL)
 
         while True:
-            left_frame = left_camera.read()
-            right_frame = right_camera.read()
+            left_frame, right_frame = read_stereo_pair(left_camera, right_camera)
 
             cv2.imshow(
                 "Calibracion izquierda",

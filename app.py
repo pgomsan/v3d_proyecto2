@@ -14,11 +14,26 @@ from calibration.camera_calibration import calibrate_camera
 from calibration.capture_calibration_images import capture_calibration_images
 from calibration.homography import compute_homography
 from calibration.select_points import select_points
+from calibration.world_transform import (
+    capture_world_transform,
+    configure_world_scale,
+    rotate_world_pitch_90deg,
+    rotate_world_roll_90deg,
+    rotate_world_yaw_90deg,
+    toggle_world_flip_z,
+)
 from main_gestures import preview_gesture_detection, run_gesture_detection
 from main_pose import (
     preview_marker_detection,
     run_pose_and_gestures,
     run_pose_estimation,
+    run_pose_with_ur5_viewer,
+)
+from viewer.ur5_viewer import (
+    cycle_tcp_aligned_axis,
+    launch_ur5_viewer,
+    run_ur5_pose_follower,
+    toggle_tcp_axis_flip,
 )
 from vision.camera import find_available_cameras, preview_camera
 
@@ -61,17 +76,35 @@ DEFAULT_CONFIG: dict[str, Any] = {
         "tool_id": "bisturi_01",
         "tool_type": "bisturi",
         "length_cm": None,
-        "marker_distance_cm": 8.0,
-        "tip_offset_cm": [-7.5, 0.0, 0.0],
-        "marker_a_color": "green",
-        "marker_b_color": "pink",
+        "marker_distance_cm": 16.5,
+        "marker_c_along_ab_cm": 5.8,
+        "marker_c_offset_cm": 5.8,
+        "marker_distance_tolerance_ratio": 0.15,
+        "smoothing_alpha": 1.0,
+        "tcp_aligned_axis": "x",
+        "tcp_axis_flip": False,
+        "tip_offset_cm": [0.0, 0.0, 0.0],
+        "marker_a_color": "pink",
+        "marker_b_color": "green",
+        "marker_c_color": "yellow",
         "marker_radius_cm": None,
     },
     "color_detection": {
-        "marker_a_hsv_lower": [55, 100, 60],
-        "marker_a_hsv_upper": [88, 255, 255],
-        "marker_b_hsv_lower": [145, 60, 80],
-        "marker_b_hsv_upper": [179, 255, 255],
+        "marker_a_hsv_lower": [145, 60, 80],
+        "marker_a_hsv_upper": [179, 255, 255],
+        "marker_b_hsv_lower": [40, 100, 60],
+        "marker_b_hsv_upper": [88, 255, 255],
+        "marker_c_hsv_lower": [18, 100, 100],
+        "marker_c_hsv_upper": [40, 255, 255],
+    },
+    "tracking": {
+        "max_epipolar_error_px": 25.0,
+        "fps_smoothing_alpha": 0.15,
+        "pose_smoothing_alpha": 0.15,
+        "max_position_jump_cm": 5.0,
+        "max_orientation_jump_deg": 35.0,
+        "temporal_reacquire_frames": 3,
+        "max_joint_speed_deg_s": 720.0,
     },
     "gestures": {
         "enabled": True,
@@ -92,12 +125,21 @@ DEFAULT_CONFIG: dict[str, Any] = {
     "calibration": {
         "chessboard_pattern_size": [7, 7],
         "chessboard_square_size": 2.1,
+        "calibration_pair_start_index": None,
+        "calibration_pair_end_index": None,
+        "stereo_outlier_max_p95_px": 4.0,
+        "stereo_outlier_min_pairs": 10,
         "camera_matrix_left_path": "calibration/K_left.npy",
         "distortion_left_path": "calibration/dist_left.npy",
         "camera_matrix_right_path": "calibration/K_right.npy",
         "distortion_right_path": "calibration/dist_right.npy",
         "stereo_calibration_path": "calibration/stereo.npz",
         "homography_path": "calibration/H.npy",
+        "world_roll_deg": 0.0,
+        "world_pitch_deg": 0.0,
+        "world_yaw_deg": 0.0,
+        "world_flip_z": False,
+        "world_scale": 1.0,
     },
     "persistence": {
         "last_pose_path": "state/last_pose.json",
@@ -125,10 +167,21 @@ MENU_ITEMS = [
     MenuItem("Configurar comandos de gestos", lambda: configure_gesture_commands()),
     MenuItem("Capturar imagenes de calibracion", capture_calibration_images),
     MenuItem("Calibrar camaras", calibrate_camera),
+    MenuItem("Capturar origen del mundo", capture_world_transform),
+    MenuItem("Rotar mundo 90 grados (eje X / roll)", rotate_world_roll_90deg),
+    MenuItem("Rotar mundo 90 grados (eje Y / pitch)", rotate_world_pitch_90deg),
+    MenuItem("Rotar mundo 90 grados (eje Z / yaw)", rotate_world_yaw_90deg),
+    MenuItem("Invertir eje Z del mundo (arriba/abajo)", toggle_world_flip_z),
+    MenuItem("Configurar escala del mundo (world_scale)", configure_world_scale),
+    MenuItem("Ciclar eje alineado del TCP (x/y/z)", cycle_tcp_aligned_axis),
+    MenuItem("Invertir sentido del eje TCP", toggle_tcp_axis_flip),
     MenuItem("Seleccionar 4 puntos del plano", select_points, pending=True),
     MenuItem("Calcular homografia", compute_homography, pending=True),
     MenuItem("Probar deteccion de marcas", preview_marker_detection),
     MenuItem("Ejecutar estimacion de pose", run_pose_estimation),
+    MenuItem("Camaras + visor UR5 en vivo", run_pose_with_ur5_viewer),
+    MenuItem("Probar visor UR5 (pose fija)", launch_ur5_viewer),
+    MenuItem("Visor UR5 siguiendo herramienta", run_ur5_pose_follower),
     MenuItem("Probar deteccion de gestos", preview_gesture_detection, pending=True),
     MenuItem("Ejecutar deteccion de gestos", run_gesture_detection, pending=True),
     MenuItem("Ejecutar pose + gestos", run_pose_and_gestures, pending=True),
@@ -429,8 +482,16 @@ def configure_tool() -> None:
         "Longitud total en cm", tool.get("length_cm")
     )
     tool["marker_distance_cm"] = _prompt_keep_float_or_none(
-        "Distancia entre marcas en cm",
+        "Distancia A-B en cm",
         tool.get("marker_distance_cm"),
+    )
+    tool["marker_c_along_ab_cm"] = _prompt_keep_float_or_none(
+        "Posicion de la rama C desde A sobre A-B en cm",
+        tool.get("marker_c_along_ab_cm"),
+    )
+    tool["marker_c_offset_cm"] = _prompt_keep_float_or_none(
+        "Longitud perpendicular de la rama C en cm",
+        tool.get("marker_c_offset_cm"),
     )
     tool["marker_radius_cm"] = _prompt_keep_float_or_none(
         "Radio de marca en cm", tool.get("marker_radius_cm")
@@ -439,10 +500,13 @@ def configure_tool() -> None:
         "Offset hasta punta util x,y,z cm", tool.get("tip_offset_cm", [0, 0, 0])
     )
     tool["marker_a_color"] = _prompt_keep_text(
-        "Color marca A", tool.get("marker_a_color", "red")
+        "Color marca A", tool.get("marker_a_color", "pink")
     )
     tool["marker_b_color"] = _prompt_keep_text(
-        "Color marca B", tool.get("marker_b_color", "blue")
+        "Color marca B", tool.get("marker_b_color", "green")
+    )
+    tool["marker_c_color"] = _prompt_keep_text(
+        "Color marca C", tool.get("marker_c_color", "yellow")
     )
 
     config.setdefault("robodk_handoff", {})["tool_id"] = tool["tool_id"]
@@ -541,7 +605,9 @@ def draw_menu(stdscr, selected_idx: int, frame_index: int) -> None:
         f"{tool.get('tool_id', 'bisturi_01')} ({tool.get('tool_type', 'bisturi')})"
     )
     marker_text = (
-        f"{tool.get('marker_a_color', 'red')} -> {tool.get('marker_b_color', 'blue')}"
+        f"A={tool.get('marker_a_color', 'pink')}, "
+        f"B={tool.get('marker_b_color', 'green')}, "
+        f"C={tool.get('marker_c_color', 'yellow')}"
     )
     camera_text = f"L={left_camera.get('index', 0)} / R={right_camera.get('index', 1)}"
     command_text = (

@@ -10,16 +10,19 @@
 
 ## Pipeline de pose
 
-1. Leer frame de camara izquierda y derecha.
+1. Solicitar ambos frames con `grab()` y recuperarlos despues con `retrieve()`
+   para reducir el desfase temporal.
 2. Corregir distorsion y rectificar si las camaras estan calibradas.
-3. Segmentar marca A y marca B por color en los frames necesarios.
-4. Obtener centro de cada marca en pixeles.
-5. Convertir centros a coordenadas 3D con el modelo elegido.
-6. Calcular vector `A -> B`.
-7. Construir pose de la herramienta: posicion, direccion y orientacion.
-8. Guardar la ultima pose y anadir una linea al log.
-9. Asociar la pose a un modelo de herramienta, por ejemplo `bisturi_01`.
-10. Exportar la pose en un formato estable para RoboDK.
+3. Segmentar marcas A, B y C por color en ambos frames.
+4. Obtener el centro de cada marca en pixeles.
+5. Rechazar correspondencias cuyo error vertical epipolar supere el limite operativo.
+6. Convertir centros validos a coordenadas 3D con triangulacion.
+7. Construir el frame local con X=`A -> B`, Y hacia C y Z=`X x Y`.
+8. Construir pose de la herramienta con TCP en A y orientacion 3D completa.
+9. Rechazar saltos temporales aislados y suavizar posicion/orientacion.
+10. Guardar y enviar al visor solo poses con estado `VALID`.
+11. Asociar la pose a un modelo de herramienta, por ejemplo `bisturi_01`.
+12. Exportar la pose en un formato estable para RoboDK.
 
 ## Pipeline de gestos
 

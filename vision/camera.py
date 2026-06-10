@@ -50,6 +50,7 @@ class CameraSource:
             self.capture.set(cv2.CAP_PROP_FRAME_HEIGHT, self.config.height)
         if self.config.fps is not None:
             self.capture.set(cv2.CAP_PROP_FPS, self.config.fps)
+        self.capture.set(cv2.CAP_PROP_BUFFERSIZE, 1)
 
         if not self.capture.isOpened():
             self.release()
@@ -69,6 +70,28 @@ class CameraSource:
         ok, frame = self.capture.read()
         if not ok:
             raise RuntimeError(f"No se pudo leer frame de la camara {self.config.name}.")
+        return frame
+
+    def grab(self) -> None:
+        """Solicita el siguiente frame sin decodificarlo todavia."""
+        if self.capture is None:
+            self.open()
+        if not self.capture.grab():
+            raise RuntimeError(
+                f"No se pudo capturar frame de la camara {self.config.name}."
+            )
+
+    def retrieve(self) -> Any:
+        """Decodifica el ultimo frame solicitado con :meth:`grab`."""
+        if self.capture is None:
+            raise RuntimeError(
+                f"La camara {self.config.name} no esta abierta."
+            )
+        ok, frame = self.capture.retrieve()
+        if not ok:
+            raise RuntimeError(
+                f"No se pudo recuperar frame de la camara {self.config.name}."
+            )
         return frame
 
     def release(self) -> None:
@@ -138,6 +161,20 @@ def load_stereo_camera_configs() -> tuple[CameraConfig, CameraConfig]:
     return _camera_config_from_dict("left", left_payload), _camera_config_from_dict("right", right_payload)
 
 
+def read_stereo_pair(
+    left_camera: CameraSource,
+    right_camera: CameraSource,
+) -> tuple[Any, Any]:
+    """Lee un par aproximado temporalmente mediante ``grab/retrieve``.
+
+    Primero se solicita un frame a ambas camaras y despues se decodifican.
+    Esto reduce el desfase frente a dos llamadas secuenciales a ``read()``.
+    """
+    left_camera.grab()
+    right_camera.grab()
+    return left_camera.retrieve(), right_camera.retrieve()
+
+
 def preview_cameras() -> None:
     """Muestra una previsualizacion simple de las dos camaras.
 
@@ -162,8 +199,7 @@ def preview_cameras() -> None:
         print("Previsualizando camaras. Pulsa q o Esc en una ventana de OpenCV para salir.")
 
         while True:
-            left_frame = left_camera.read()
-            right_frame = right_camera.read()
+            left_frame, right_frame = read_stereo_pair(left_camera, right_camera)
 
             cv2.imshow(f"Camara izquierda [{left_config.index}]", left_frame)
             cv2.imshow(f"Camara derecha [{right_config.index}]", right_frame)

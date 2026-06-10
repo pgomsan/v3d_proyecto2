@@ -27,37 +27,91 @@
     "tool_id": "bisturi_01",
     "tool_type": "bisturi",
     "length_cm": null,
-    "marker_distance_cm": 8.0,
+    "marker_distance_cm": 16.5,
+    "marker_c_along_ab_cm": 5.8,
+    "marker_c_offset_cm": 5.8,
+    "marker_distance_tolerance_ratio": 0.15,
+    "smoothing_alpha": 1.0,
+    "tcp_aligned_axis": "x",
+    "tcp_axis_flip": false,
     "tip_offset_cm": [
-      -7.5,
+      0.0,
       0.0,
       0.0
     ],
-    "marker_a_color": "green",
-    "marker_b_color": "pink",
+    "marker_a_color": "pink",
+    "marker_b_color": "green",
+    "marker_c_color": "yellow",
     "marker_radius_cm": null
   },
   "color_detection": {
     "marker_a_hsv_lower": [
-      55,
-      100,
-      60
-    ],
-    "marker_a_hsv_upper": [
-      88,
-      255,
-      255
-    ],
-    "marker_b_hsv_lower": [
       145,
       60,
       80
     ],
-    "marker_b_hsv_upper": [
+    "marker_a_hsv_upper": [
       179,
       255,
       255
+    ],
+    "marker_b_hsv_lower": [
+      40,
+      100,
+      60
+    ],
+    "marker_b_hsv_upper": [
+      88,
+      255,
+      255
+    ],
+    "marker_c_hsv_lower": [
+      18,
+      100,
+      100
+    ],
+    "marker_c_hsv_upper": [
+      40,
+      255,
+      255
     ]
+  },
+  "tracking": {
+    "max_epipolar_error_px": 10.0,
+    "fps_smoothing_alpha": 0.15,
+    "pose_smoothing_alpha": 0.15,
+    "max_position_jump_cm": 5.0,
+    "max_orientation_jump_deg": 35.0,
+    "temporal_reacquire_frames": 3,
+    "max_joint_speed_deg_s": 720.0
+  },
+  "calibration": {
+    "chessboard_pattern_size": [
+      7,
+      7
+    ],
+    "chessboard_square_size": 2.1,
+    "calibration_pair_start_index": 0,
+    "calibration_pair_end_index": null,
+    "stereo_outlier_max_p95_px": 4.0,
+    "stereo_outlier_min_pairs": 10,
+    "camera_matrix_left_path": "calibration/K_left.npy",
+    "distortion_left_path": "calibration/dist_left.npy",
+    "camera_matrix_right_path": "calibration/K_right.npy",
+    "distortion_right_path": "calibration/dist_right.npy",
+    "stereo_calibration_path": "calibration/stereo.npz",
+    "homography_path": "calibration/H.npy",
+    "world_roll_deg": 0.0,
+    "world_pitch_deg": 0.0,
+    "world_yaw_deg": 0.0,
+    "world_flip_z": true,
+    "world_scale": 3.0
+  },
+  "persistence": {
+    "last_pose_path": "state/last_pose.json",
+    "last_gesture_path": "state/last_gesture.json",
+    "pose_log_path": "state/logs/poses.jsonl",
+    "gesture_log_path": "state/logs/gestures.jsonl"
   },
   "gestures": {
     "enabled": true,
@@ -74,24 +128,5 @@
     "output_frame": "camera",
     "tool_id": "bisturi_01",
     "owner": "companion_project"
-  },
-  "calibration": {
-    "chessboard_pattern_size": [
-      7,
-      7
-    ],
-    "chessboard_square_size": 2.1,
-    "camera_matrix_left_path": "calibration/K_left.npy",
-    "distortion_left_path": "calibration/dist_left.npy",
-    "camera_matrix_right_path": "calibration/K_right.npy",
-    "distortion_right_path": "calibration/dist_right.npy",
-    "stereo_calibration_path": "calibration/stereo.npz",
-    "homography_path": "calibration/H.npy"
-  },
-  "persistence": {
-    "last_pose_path": "state/last_pose.json",
-    "last_gesture_path": "state/last_gesture.json",
-    "pose_log_path": "state/logs/poses.jsonl",
-    "gesture_log_path": "state/logs/gestures.jsonl"
   }
 }

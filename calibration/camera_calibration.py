@@ -32,6 +32,7 @@ class CalibrationDataset:
     right_points: list[np.ndarray]
     image_size: tuple[int, int]
     total_pairs: int
+    pair_indices: list[int]
     skipped_pairs: list[str]
     reordered_pairs: list[int]
 
@@ -87,11 +88,38 @@ def _indexed_images(side: str) -> dict[int, Path]:
     return images
 
 
-def _image_pairs() -> list[tuple[int, Path, Path]]:
+def _image_pairs(
+    start_index: int | None = None,
+    end_index: int | None = None,
+) -> list[tuple[int, Path, Path]]:
     left_images = _indexed_images("left")
     right_images = _indexed_images("right")
     indices = sorted(set(left_images) & set(right_images))
+    if start_index is not None:
+        indices = [index for index in indices if index >= start_index]
+    if end_index is not None:
+        indices = [index for index in indices if index <= end_index]
     return [(index, left_images[index], right_images[index]) for index in indices]
+
+
+def _pair_index_bounds(
+    config: dict[str, Any],
+) -> tuple[int | None, int | None]:
+    calibration = config.get("calibration", {})
+
+    def optional_index(key: str) -> int | None:
+        value = calibration.get(key)
+        if value is None:
+            return None
+        try:
+            return int(value)
+        except (TypeError, ValueError):
+            return None
+
+    return (
+        optional_index("calibration_pair_start_index"),
+        optional_index("calibration_pair_end_index"),
+    )
 
 
 def _get_corners(image: np.ndarray, pattern_size: tuple[int, int]):
@@ -165,12 +193,17 @@ def _align_corner_order(
 
 
 def _collect_dataset(
-    pattern_size: tuple[int, int], square_size: float
+    pattern_size: tuple[int, int],
+    square_size: float,
+    start_index: int | None = None,
+    end_index: int | None = None,
 ) -> CalibrationDataset:
-    pairs = _image_pairs()
+    pairs = _image_pairs(start_index, end_index)
     if not pairs:
         raise FileNotFoundError(
-            f"No hay pares left_XX/right_XX en {IMAGE_DIR}. "
+            f"No hay pares left_XX/right_XX en {IMAGE_DIR} para el rango "
+            f"{start_index if start_index is not None else 'inicio'}-"
+            f"{end_index if end_index is not None else 'fin'}. "
             "Primero ejecuta 'Capturar imagenes de calibracion'."
         )
 
@@ -178,6 +211,7 @@ def _collect_dataset(
     object_points: list[np.ndarray] = []
     left_points: list[np.ndarray] = []
     right_points: list[np.ndarray] = []
+    pair_indices: list[int] = []
     skipped_pairs: list[str] = []
     reordered_pairs: list[int] = []
     image_size: tuple[int, int] | None = None
@@ -215,6 +249,7 @@ def _collect_dataset(
         object_points.append(object_template.copy())
         left_points.append(left_corners)
         right_points.append(right_corners)
+        pair_indices.append(index)
 
     if image_size is None:
         image_size = (0, 0)
@@ -227,6 +262,7 @@ def _collect_dataset(
         right_points=right_points,
         image_size=image_size,
         total_pairs=len(pairs),
+        pair_indices=pair_indices,
         skipped_pairs=skipped_pairs,
         reordered_pairs=reordered_pairs,
     )
@@ -234,8 +270,9 @@ def _collect_dataset(
 
 def _best_dataset(config: dict[str, Any]) -> CalibrationDataset:
     square_size = _square_size(config)
+    start_index, end_index = _pair_index_bounds(config)
     datasets = [
-        _collect_dataset(pattern_size, square_size)
+        _collect_dataset(pattern_size, square_size, start_index, end_index)
         for pattern_size in _candidate_pattern_sizes(config)
     ]
     return max(datasets, key=lambda dataset: len(dataset.object_points))
@@ -259,6 +296,175 @@ def _mean_reprojection_error(
     return total_error / len(object_points)
 
 
+def _rectified_epipolar_error_stats(
+    left_points: list[np.ndarray],
+    right_points: list[np.ndarray],
+    k_left: np.ndarray,
+    dist_left: np.ndarray,
+    k_right: np.ndarray,
+    dist_right: np.ndarray,
+    r_left_rect: np.ndarray,
+    r_right_rect: np.ndarray,
+    p_left: np.ndarray,
+    p_right: np.ndarray,
+) -> dict[str, float]:
+    errors: list[np.ndarray] = []
+    for left_corners, right_corners in zip(left_points, right_points):
+        left_rectified = cv.undistortPoints(
+            left_corners,
+            k_left,
+            dist_left,
+            R=r_left_rect,
+            P=p_left,
+        )
+        right_rectified = cv.undistortPoints(
+            right_corners,
+            k_right,
+            dist_right,
+            R=r_right_rect,
+            P=p_right,
+        )
+        errors.append(
+            np.abs(left_rectified[:, 0, 1] - right_rectified[:, 0, 1])
+        )
+
+    all_errors = np.concatenate(errors)
+    return {
+        "mean": float(np.mean(all_errors)),
+        "median": float(np.median(all_errors)),
+        "p95": float(np.percentile(all_errors, 95)),
+        "max": float(np.max(all_errors)),
+    }
+
+
+def _temporary_epipolar_scores(
+    dataset: CalibrationDataset,
+) -> tuple[dict[str, float], list[float]]:
+    _, k_left, dist_left, _, _ = cv.calibrateCamera(
+        dataset.object_points,
+        dataset.left_points,
+        dataset.image_size,
+        None,
+        None,
+    )
+    _, k_right, dist_right, _, _ = cv.calibrateCamera(
+        dataset.object_points,
+        dataset.right_points,
+        dataset.image_size,
+        None,
+        None,
+    )
+    criteria = (cv.TERM_CRITERIA_MAX_ITER | cv.TERM_CRITERIA_EPS, 100, 1e-5)
+    (
+        _,
+        k_left,
+        dist_left,
+        k_right,
+        dist_right,
+        rotation,
+        translation,
+        _,
+        _,
+    ) = cv.stereoCalibrate(
+        dataset.object_points,
+        dataset.left_points,
+        dataset.right_points,
+        k_left,
+        dist_left,
+        k_right,
+        dist_right,
+        dataset.image_size,
+        criteria=criteria,
+        flags=cv.CALIB_FIX_INTRINSIC,
+    )
+    r_left, r_right, p_left, p_right, *_ = cv.stereoRectify(
+        k_left,
+        dist_left,
+        k_right,
+        dist_right,
+        dataset.image_size,
+        rotation,
+        translation,
+        flags=cv.CALIB_ZERO_DISPARITY,
+        alpha=0,
+    )
+
+    errors_by_pair: list[np.ndarray] = []
+    for left_corners, right_corners in zip(
+        dataset.left_points, dataset.right_points
+    ):
+        left_rectified = cv.undistortPoints(
+            left_corners,
+            k_left,
+            dist_left,
+            R=r_left,
+            P=p_left,
+        )
+        right_rectified = cv.undistortPoints(
+            right_corners,
+            k_right,
+            dist_right,
+            R=r_right,
+            P=p_right,
+        )
+        errors_by_pair.append(
+            np.abs(left_rectified[:, 0, 1] - right_rectified[:, 0, 1])
+        )
+
+    all_errors = np.concatenate(errors_by_pair)
+    stats = {
+        "mean": float(np.mean(all_errors)),
+        "median": float(np.median(all_errors)),
+        "p95": float(np.percentile(all_errors, 95)),
+        "max": float(np.max(all_errors)),
+    }
+    pair_means = [float(np.mean(errors)) for errors in errors_by_pair]
+    return stats, pair_means
+
+
+def _dataset_without_position(
+    dataset: CalibrationDataset,
+    rejected_position: int,
+) -> CalibrationDataset:
+    keep = [
+        position
+        for position in range(len(dataset.object_points))
+        if position != rejected_position
+    ]
+    return CalibrationDataset(
+        pattern_size=dataset.pattern_size,
+        square_size=dataset.square_size,
+        object_points=[dataset.object_points[position] for position in keep],
+        left_points=[dataset.left_points[position] for position in keep],
+        right_points=[dataset.right_points[position] for position in keep],
+        image_size=dataset.image_size,
+        total_pairs=dataset.total_pairs,
+        pair_indices=[dataset.pair_indices[position] for position in keep],
+        skipped_pairs=dataset.skipped_pairs,
+        reordered_pairs=dataset.reordered_pairs,
+    )
+
+
+def _reject_stereo_outliers(
+    dataset: CalibrationDataset,
+    max_p95_px: float,
+    min_pairs: int,
+) -> tuple[CalibrationDataset, list[int]]:
+    filtered = dataset
+    rejected_indices: list[int] = []
+    minimum = max(3, min(int(min_pairs), len(dataset.object_points)))
+
+    while len(filtered.object_points) > minimum:
+        stats, pair_means = _temporary_epipolar_scores(filtered)
+        if stats["p95"] <= max_p95_px:
+            break
+        worst_position = int(np.argmax(pair_means))
+        rejected_indices.append(filtered.pair_indices[worst_position])
+        filtered = _dataset_without_position(filtered, worst_position)
+
+    return filtered, rejected_indices
+
+
 def calibrate_camera() -> None:
     """Calibra ambas camaras y la relacion estereo usando pares de tablero."""
     if cv is None:
@@ -266,7 +472,25 @@ def calibrate_camera() -> None:
 
     config = load_config()
     calibration = config.get("calibration", {})
+    pair_start_index, pair_end_index = _pair_index_bounds(config)
     dataset = _best_dataset(config)
+    try:
+        outlier_max_p95_px = float(
+            calibration.get("stereo_outlier_max_p95_px", 4.0)
+        )
+    except (TypeError, ValueError):
+        outlier_max_p95_px = 4.0
+    try:
+        outlier_min_pairs = int(
+            calibration.get("stereo_outlier_min_pairs", 10)
+        )
+    except (TypeError, ValueError):
+        outlier_min_pairs = 10
+    dataset, outlier_rejected_pairs = _reject_stereo_outliers(
+        dataset,
+        outlier_max_p95_px,
+        outlier_min_pairs,
+    )
     valid_pairs = len(dataset.object_points)
     if valid_pairs < 3:
         raise RuntimeError(
@@ -281,6 +505,16 @@ def calibrate_camera() -> None:
         f"tablero {dataset.pattern_size[0]}x{dataset.pattern_size[1]}, "
         f"tamano de imagen {dataset.image_size}."
     )
+    print(
+        "Rango de pares: "
+        f"{pair_start_index if pair_start_index is not None else 'inicio'}-"
+        f"{pair_end_index if pair_end_index is not None else 'fin'}."
+    )
+    if outlier_rejected_pairs:
+        print(
+            "Pares descartados por incoherencia estereo: "
+            + ", ".join(str(index) for index in outlier_rejected_pairs)
+        )
 
     left_rms, k_left, dist_left, rvecs_left, tvecs_left = cv.calibrateCamera(
         dataset.object_points,
@@ -385,6 +619,18 @@ def calibrate_camera() -> None:
         k_right,
         dist_right,
     )
+    epipolar_stats = _rectified_epipolar_error_stats(
+        dataset.left_points,
+        dataset.right_points,
+        k_left_st,
+        dist_left_st,
+        k_right_st,
+        dist_right_st,
+        r_left_rect,
+        r_right_rect,
+        p_left,
+        p_right,
+    )
 
     save_calibration_info(
         {
@@ -392,8 +638,14 @@ def calibrate_camera() -> None:
             "calibration_images_dir": str(IMAGE_DIR.relative_to(BASE_DIR)),
             "valid_pairs": valid_pairs,
             "total_pairs": dataset.total_pairs,
+            "pair_start_index": pair_start_index,
+            "pair_end_index": pair_end_index,
+            "used_pair_indices": dataset.pair_indices,
             "skipped_pairs": dataset.skipped_pairs,
             "reordered_pairs": dataset.reordered_pairs,
+            "outlier_rejected_pairs": outlier_rejected_pairs,
+            "stereo_outlier_max_p95_px": outlier_max_p95_px,
+            "stereo_outlier_min_pairs": outlier_min_pairs,
             "pattern_size": list(dataset.pattern_size),
             "square_size": dataset.square_size,
             "image_size": list(dataset.image_size),
@@ -402,6 +654,7 @@ def calibrate_camera() -> None:
             "left_mean_reprojection_error": float(left_mean_error),
             "right_mean_reprojection_error": float(right_mean_error),
             "stereo_rms": float(stereo_rms),
+            "rectified_epipolar_error_px": epipolar_stats,
             "camera_matrix_left_path": str(k_left_path.relative_to(BASE_DIR)),
             "distortion_left_path": str(dist_left_path.relative_to(BASE_DIR)),
             "camera_matrix_right_path": str(k_right_path.relative_to(BASE_DIR)),
@@ -414,4 +667,10 @@ def calibrate_camera() -> None:
     print(f"RMS izquierda: {left_rms:.6f}")
     print(f"RMS derecha: {right_rms:.6f}")
     print(f"RMS estereo: {stereo_rms:.6f}")
+    print(
+        "Error epipolar rectificado: "
+        f"media={epipolar_stats['mean']:.3f}px, "
+        f"p95={epipolar_stats['p95']:.3f}px, "
+        f"max={epipolar_stats['max']:.3f}px"
+    )
     print(f"Guardado: {stereo_path.relative_to(BASE_DIR)}")

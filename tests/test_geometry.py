@@ -3,13 +3,16 @@ from __future__ import annotations
 import unittest
 
 from pose.geometry import (
+    build_orientation_from_markers,
     build_orientation_from_direction,
+    cross_product,
     direction_from_points,
     distance_2d,
     distance_3d,
     midpoint_2d,
     midpoint_3d,
     normalize_vector,
+    rotation_matrix_from_markers,
 )
 
 
@@ -39,6 +42,35 @@ class GeometryTests(unittest.TestCase):
 
         self.assertEqual(orientation["format"], "direction_vector")
         self.assertEqual(orientation["value"], [0.0, 0.0, 1.0])
+
+    def test_rotation_matrix_from_three_markers(self) -> None:
+        rotation = rotation_matrix_from_markers(
+            (1.0, 2.0, 3.0),
+            (16.0, 2.0, 3.0),
+            (6.0, 7.0, 3.0),
+        )
+
+        self.assertEqual(
+            rotation,
+            (
+                (1.0, 0.0, 0.0),
+                (0.0, 1.0, 0.0),
+                (0.0, 0.0, 1.0),
+            ),
+        )
+        orientation = build_orientation_from_markers(
+            (1.0, 2.0, 3.0),
+            (16.0, 2.0, 3.0),
+            (6.0, 7.0, 3.0),
+        )
+        self.assertEqual(orientation["format"], "rotation_matrix")
+        self.assertEqual(orientation["value"], [list(row) for row in rotation])
+
+    def test_cross_product(self) -> None:
+        self.assertEqual(
+            cross_product((1.0, 0.0, 0.0), (0.0, 1.0, 0.0)),
+            (0.0, 0.0, 1.0),
+        )
 
 
 if __name__ == "__main__":

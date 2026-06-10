@@ -4,7 +4,7 @@ La simulacion y la parte del robot las desarrollara otro compañero en RoboDK. E
 
 ## Responsabilidad de este proyecto
 
-- Detectar las dos marcas de color.
+- Detectar las tres marcas de color.
 - Estimar posicion y orientacion del palo/herramienta.
 - Asociar la pose a una herramienta parametrizada, por ejemplo un bisturi.
 - Detectar gestos de mano y traducirlos a comandos de alto nivel.
@@ -29,18 +29,21 @@ La simulacion y la parte del robot las desarrollara otro compañero en RoboDK. E
   "tool_type": "bisturi",
   "tool_parameters": {
     "length_cm": null,
-    "marker_distance_cm": null,
+    "marker_distance_cm": 16.5,
+    "marker_c_along_ab_cm": 5.8,
+    "marker_c_offset_cm": 5.8,
     "tip_offset_cm": [0.0, 0.0, 0.0]
   },
   "position_cm": [0.0, 0.0, 0.0],
   "direction": [1.0, 0.0, 0.0],
   "orientation": {
-    "format": "pending",
-    "value": []
+    "format": "rotation_matrix",
+    "value": [[1, 0, 0], [0, 1, 0], [0, 0, 1]]
   },
   "markers": {
-    "a_px": [0, 0],
-    "b_px": [0, 0]
+    "a_3d_cm": [0, 0, 0],
+    "b_3d_cm": [16.5, 0, 0],
+    "c_3d_cm": [5.8, 5.8, 0]
   },
   "confidence": 0.0
 }
@@ -70,6 +73,6 @@ Antes de integrar, conviene fijar:
 
 - unidades: centimetros o milimetros;
 - sistema de referencia: camara, mesa, herramienta o robot;
-- formato de orientacion: vector direccion, matriz 3x3, Euler, quaternion o pose 4x4;
-- punto de la herramienta que debe seguir el robot: centro, punta del bisturi u otro offset;
+- formato de orientacion: actualmente matriz 3x3 con columnas X/Y/Z;
+- punto seguido por el robot: centro de A, definido como punta/TCP;
 - metodo de intercambio: archivo JSON, socket, MQTT, API local o lectura directa de log.

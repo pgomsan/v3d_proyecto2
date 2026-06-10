@@ -23,8 +23,10 @@ End-to-end stereo pose pipeline is **implemented and working** (RMS estéreo ≈
 
 ```
 CameraSource (vision/camera.py)
+  → read_stereo_pair (grab both, then retrieve both)
   → StereoCalibration.rectify_pair       (vision/stereo.py)
-  → detect_marker(A) / detect_marker(B)  (vision/color_markers.py)
+  → detect_marker(A/B/C)                 (vision/color_markers.py)
+  → epipolar validation (default <= 4 px)
   → StereoCalibration.triangulate_point   → 3D in cm
   → RodPoseEstimator.estimate_from_markers (pose/rod_pose.py)
   → build_payload  → save_last_pose       (app_state.py)
@@ -42,15 +44,20 @@ CameraSource (vision/camera.py)
 
 ### Pose payload (what RoboDK consumes)
 
+The current tool uses three markers: A=pink, B=green, C=yellow. Its local
+coordinates are A=(0,0,0), B=(16.5,0,0), C=(5.8,5.8,0), in centimetres.
+
 `RodPoseEstimator.build_payload` produces:
 
-- `position_cm` = **tool tip** (not the midpoint). `position_reference: "tool_tip"`.
-- `tip_position_cm` = same as position (the estimator applies `tip_offset_cm` along the A→B direction, plus y/z offsets).
+- `position_cm` = **marker A / tool tip**. `position_reference: "marker_a_tool_tip"`.
+- `tip_position_cm` = same as position with the current zero local offset.
 - `direction` = unit vector A→B.
-- `orientation` = `{format: "direction_vector", value: [...]}` — placeholder; matrix/quaternion is pending.
-- `markers.center_3d_cm` / `a_3d_cm` / `b_3d_cm` / pixel coords on each camera.
-- `marker_distance_cm` (measured) vs `expected_marker_distance_cm` (from config) — useful as a sanity check overlay.
-- `confidence` = min across all four marker detections (left A, right A, left B, right B).
+- `orientation` = a 3x3 rotation matrix whose columns are tool X/Y/Z.
+- `markers.center_3d_cm` / `a_3d_cm` / `b_3d_cm` / `c_3d_cm` plus pixel coordinates from both cameras.
+- `marker_distances_cm` validates AB, AC and BC against the configured geometry.
+- `epipolar_errors_px` records the rectified vertical mismatch for A/B/C.
+- Only `VALID` poses are persisted or sent to the UR5 viewer.
+- `confidence` = min across all six marker detections.
 - `frame: "left_camera_rectified"` — coordinates are in the rectified left camera frame.
 
 ### Calibration — non-obvious bits
@@ -74,7 +81,9 @@ Marker area is bounded both ways: `MIN_MARKER_AREA_PX = 120`, `MAX_MARKER_AREA_R
 
 `app.py` duplicates `DEFAULT_CONFIG` because the menu must work even when downstream modules are stubs. **When adding new config keys, update both `DEFAULT_CONFIG` dicts** (in `app.py` and `app_state.py`). `_merge_defaults()` ensures old `state/config.json` files keep working when new keys appear.
 
-Current real config in use: green/pink markers on a pen (not the red/blue bisturí placeholder), `marker_distance_cm: 8.0`, `tip_offset_cm: [-7.5, 0, 0]` (tip is opposite the A→B direction), and **cameras swapped: left=1, right=0**.
+Current real config in use: A=pink TCP, B=green at 16.5 cm, C=yellow at
+local `(5.8,5.8,0)`, `tip_offset_cm: [0,0,0]`, and **cameras swapped:
+left=1, right=0**.
 
 ## Conventions
 

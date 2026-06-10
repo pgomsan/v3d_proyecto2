@@ -36,6 +36,13 @@ class MarkerPair:
     marker_b: MarkerDetection
 
 
+@dataclass
+class MarkerTriplet:
+    marker_a: MarkerDetection
+    marker_b: MarkerDetection
+    marker_c: MarkerDetection
+
+
 def threshold_color(frame: Any, color_range: ColorRange) -> Any:
     """Devuelve una mascara binaria para un rango HSV.
 
@@ -140,6 +147,34 @@ def detect_marker_pair(frame: Any, marker_a_range: ColorRange, marker_b_range: C
         return None
 
     return MarkerPair(marker_a=marker_a, marker_b=marker_b)
+
+
+def detect_marker_triplet(
+    frame: Any,
+    marker_a_range: ColorRange,
+    marker_b_range: ColorRange,
+    marker_c_range: ColorRange,
+) -> MarkerTriplet | None:
+    """Detecta A, B y C, necesarias para recuperar la orientacion 3D completa."""
+    marker_a = detect_marker(frame, "A", marker_a_range)
+    marker_b = detect_marker(frame, "B", marker_b_range)
+    marker_c = detect_marker(frame, "C", marker_c_range)
+    if marker_a is None or marker_b is None or marker_c is None:
+        return None
+
+    centers = [marker_a.center_px, marker_b.center_px, marker_c.center_px]
+    for index, first in enumerate(centers):
+        for second in centers[index + 1 :]:
+            dx = first[0] - second[0]
+            dy = first[1] - second[1]
+            if (dx * dx + dy * dy) ** 0.5 < 5.0:
+                return None
+
+    return MarkerTriplet(
+        marker_a=marker_a,
+        marker_b=marker_b,
+        marker_c=marker_c,
+    )
 
 
 def tune_hsv_ranges() -> None:

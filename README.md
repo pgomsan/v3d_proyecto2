@@ -4,7 +4,9 @@ Base limpia para desarrollar desde cero una aplicacion de vision 3D.
 
 ## Objetivo
 
-Estimar la posicion y orientacion de un palo/herramienta usando dos marcas de colores distintos. La idea es que la linea entre ambas marcas defina la orientacion principal de la herramienta y que su posicion estimada pueda entregarse despues al modulo de robot.
+Estimar la posicion y orientacion completa de una herramienta usando tres
+marcas de colores. A y B definen el eje principal y C elimina la ambiguedad
+de giro alrededor de ese eje.
 
 El caso de uso final es que una persona mueva una herramienta fisica, por ejemplo un bisturi, y el sistema obtenga los parametros necesarios para que el robot pueda imitar ese manejo en RoboDK.
 
@@ -32,10 +34,10 @@ El proyecto tambien reserva una parte independiente para deteccion de gestos de 
 2. Confirmar con `Ver camaras` que ambas se abren correctamente.
 3. Capturar pares de imagenes de calibracion.
 4. Calibrar ambas camaras y guardar parametros intrinsecos.
-5. Definir el modelo geometrico de la herramienta: tipo, longitud real, colores de las marcas, distancia entre marcas, punto util y sistema de referencia local.
-6. Detectar cada marca por color en imagen.
+5. Definir el modelo geometrico de la herramienta: A rosa como TCP, B verde a 15 cm y C amarilla en `(5,5,0)` cm.
+6. Detectar las tres marcas por color en imagen.
 7. Convertir las detecciones de imagen a posicion 3D con el modelo elegido.
-8. Calcular orientacion a partir del vector entre marcas.
+8. Calcular una matriz de orientacion a partir del frame A-B-C.
 9. Guardar ultima pose y log historico en `state/`.
 10. Anadir deteccion de gestos como modulo independiente.
 11. Convertir gestos concretos en comandos como `stop`, `continue` o `pause`.
@@ -81,12 +83,13 @@ Salida recomendada de pose:
   "position_cm": [0.0, 0.0, 0.0],
   "direction": [1.0, 0.0, 0.0],
   "orientation": {
-    "format": "pending",
-    "value": []
+    "format": "rotation_matrix",
+    "value": [[1, 0, 0], [0, 1, 0], [0, 0, 1]]
   },
   "markers": {
-    "a_px": [0, 0],
-    "b_px": [0, 0]
+    "a_3d_cm": [0, 0, 0],
+    "b_3d_cm": [15, 0, 0],
+    "c_3d_cm": [5, 5, 0]
   },
   "confidence": 0.0
 }

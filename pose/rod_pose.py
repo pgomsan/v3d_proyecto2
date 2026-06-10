@@ -6,10 +6,10 @@ from typing import Any
 
 from pose.geometry import (
     Point3,
-    build_orientation_from_direction,
-    direction_from_points,
+    build_orientation_from_markers,
     distance_3d,
     midpoint_3d,
+    rotation_matrix_from_markers,
 )
 
 
@@ -20,12 +20,16 @@ class ToolParameters:
     length_cm: float | None
     marker_distance_cm: float | None
     tip_offset_cm: tuple[float, float, float]
+    marker_c_along_ab_cm: float | None = None
+    marker_c_offset_cm: float | None = None
+    marker_distance_tolerance_ratio: float = 0.50
 
 
 @dataclass
-class ToolMarkerPair3D:
+class ToolMarkerTriplet3D:
     marker_a_cm: Point3
     marker_b_cm: Point3
+    marker_c_cm: Point3
     confidence: float
     marker_pixels: dict[str, Any] | None = None
 
@@ -58,26 +62,42 @@ class RodPoseEstimator:
         """
         self.tool_parameters = tool_parameters
 
-    def estimate_from_markers(self, marker_pair: Any) -> ToolPose | None:
-        """Estima pose desde un par de marcas.
-
-        Implementacion recomendada:
-        - convertir centros de pixel a coordenadas 3D con el metodo elegido;
-        - calcular posicion de referencia: centro, marca A o punta;
-        - calcular direccion A -> B;
-        - construir orientacion;
-        - devolver `ToolPose` con confianza.
-        """
-        marker_a_cm, marker_b_cm = _marker_points_cm(marker_pair)
-        if marker_a_cm is None or marker_b_cm is None:
+    def estimate_from_markers(self, marker_triplet: Any) -> ToolPose | None:
+        """Estima posicion y orientacion completa desde A, B y C."""
+        marker_a_cm, marker_b_cm, marker_c_cm = _marker_points_cm(marker_triplet)
+        if marker_a_cm is None or marker_b_cm is None or marker_c_cm is None:
             return None
 
-        direction = direction_from_points(marker_a_cm, marker_b_cm)
-        marker_center_cm = midpoint_3d(marker_a_cm, marker_b_cm)
-        position_cm = _apply_tip_offset(
-            marker_center_cm, direction, self.tool_parameters.tip_offset_cm
+        measured_distances = _marker_distances(
+            marker_a_cm, marker_b_cm, marker_c_cm
         )
-        confidence = float(getattr(marker_pair, "confidence", 1.0))
+        expected_distances = _expected_marker_distances(self.tool_parameters)
+        if not _distances_are_valid(
+            measured_distances,
+            expected_distances,
+            self.tool_parameters.marker_distance_tolerance_ratio,
+        ):
+            return None
+
+        try:
+            rotation_matrix = rotation_matrix_from_markers(
+                marker_a_cm, marker_b_cm, marker_c_cm
+            )
+        except ValueError:
+            return None
+
+        direction = (
+            rotation_matrix[0][0],
+            rotation_matrix[1][0],
+            rotation_matrix[2][0],
+        )
+        marker_center_cm = midpoint_3d(marker_a_cm, marker_b_cm)
+        position_cm = _apply_local_offset(
+            marker_a_cm,
+            rotation_matrix,
+            self.tool_parameters.tip_offset_cm,
+        )
+        confidence = float(getattr(marker_triplet, "confidence", 1.0))
 
         return ToolPose(
             tool_id=self.tool_parameters.tool_id,
@@ -85,26 +105,27 @@ class RodPoseEstimator:
             frame="left_camera_rectified",
             position_cm=position_cm,
             direction=direction,
-            orientation=build_orientation_from_direction(direction),
+            orientation=build_orientation_from_markers(
+                marker_a_cm, marker_b_cm, marker_c_cm
+            ),
             confidence=confidence,
             marker_center_cm=marker_center_cm,
-            position_reference="tool_tip",
+            position_reference="marker_a_tool_tip",
         )
 
     def compute_tip_position(self, pose: ToolPose) -> tuple[float, float, float]:
-        """Aplica `tip_offset_cm` para obtener la punta util de la herramienta."""
-        if pose.marker_center_cm is None:
-            return pose.position_cm
-        return _apply_tip_offset(
-            pose.marker_center_cm, pose.direction, self.tool_parameters.tip_offset_cm
-        )
+        """Devuelve el TCP, calculado desde A al estimar la pose."""
+        return pose.position_cm
 
-    def build_payload(self, pose: ToolPose, marker_pair: Any) -> dict[str, Any]:
+    def build_payload(self, pose: ToolPose, marker_triplet: Any) -> dict[str, Any]:
         """Convierte la pose a JSON serializable para logs o RoboDK."""
-        marker_a_cm, marker_b_cm = _marker_points_cm(marker_pair)
-        marker_distance_cm = None
-        if marker_a_cm is not None and marker_b_cm is not None:
-            marker_distance_cm = distance_3d(marker_a_cm, marker_b_cm)
+        marker_a_cm, marker_b_cm, marker_c_cm = _marker_points_cm(marker_triplet)
+        marker_distances: dict[str, float] = {}
+        if marker_a_cm is not None and marker_b_cm is not None and marker_c_cm is not None:
+            marker_distances = _marker_distances(
+                marker_a_cm, marker_b_cm, marker_c_cm
+            )
+        expected_distances = _expected_marker_distances(self.tool_parameters)
 
         payload: dict[str, Any] = {
             "frame": pose.frame,
@@ -117,12 +138,14 @@ class RodPoseEstimator:
             "tip_position_cm": list(self.compute_tip_position(pose)),
             "direction": list(pose.direction),
             "orientation": pose.orientation,
-            "marker_distance_cm": marker_distance_cm,
+            "marker_distance_cm": marker_distances.get("ab"),
             "expected_marker_distance_cm": self.tool_parameters.marker_distance_cm,
+            "marker_distances_cm": marker_distances,
+            "expected_marker_distances_cm": expected_distances,
             "confidence": pose.confidence,
         }
 
-        marker_pixels = getattr(marker_pair, "marker_pixels", None)
+        marker_pixels = getattr(marker_triplet, "marker_pixels", None)
         markers: dict[str, Any] = {}
         if pose.marker_center_cm is not None:
             markers["center_3d_cm"] = list(pose.marker_center_cm)
@@ -130,51 +153,109 @@ class RodPoseEstimator:
             markers["a_3d_cm"] = list(marker_a_cm)
         if marker_b_cm is not None:
             markers["b_3d_cm"] = list(marker_b_cm)
+        if marker_c_cm is not None:
+            markers["c_3d_cm"] = list(marker_c_cm)
         if marker_pixels:
             markers.update(_serializable_value(marker_pixels))
         payload["markers"] = markers
         return payload
 
 
-def estimate_tool_pose(marker_pair: Any, tool_parameters: ToolParameters) -> ToolPose | None:
+def estimate_tool_pose(marker_triplet: Any, tool_parameters: ToolParameters) -> ToolPose | None:
     """Atajo funcional para crear el estimador y calcular una pose."""
-    return RodPoseEstimator(tool_parameters).estimate_from_markers(marker_pair)
+    return RodPoseEstimator(tool_parameters).estimate_from_markers(marker_triplet)
 
 
-def _marker_points_cm(marker_pair: Any) -> tuple[Point3 | None, Point3 | None]:
-    if marker_pair is None:
-        return None, None
+def _marker_points_cm(
+    marker_triplet: Any,
+) -> tuple[Point3 | None, Point3 | None, Point3 | None]:
+    if marker_triplet is None:
+        return None, None, None
 
-    if isinstance(marker_pair, dict):
-        marker_a = marker_pair.get("marker_a_cm") or marker_pair.get("a_3d_cm")
-        marker_b = marker_pair.get("marker_b_cm") or marker_pair.get("b_3d_cm")
+    if isinstance(marker_triplet, dict):
+        marker_a = marker_triplet.get("marker_a_cm") or marker_triplet.get("a_3d_cm")
+        marker_b = marker_triplet.get("marker_b_cm") or marker_triplet.get("b_3d_cm")
+        marker_c = marker_triplet.get("marker_c_cm") or marker_triplet.get("c_3d_cm")
     else:
-        marker_a = getattr(marker_pair, "marker_a_cm", None) or getattr(
-            marker_pair, "a_3d_cm", None
+        marker_a = getattr(marker_triplet, "marker_a_cm", None) or getattr(
+            marker_triplet, "a_3d_cm", None
         )
-        marker_b = getattr(marker_pair, "marker_b_cm", None) or getattr(
-            marker_pair, "b_3d_cm", None
+        marker_b = getattr(marker_triplet, "marker_b_cm", None) or getattr(
+            marker_triplet, "b_3d_cm", None
+        )
+        marker_c = getattr(marker_triplet, "marker_c_cm", None) or getattr(
+            marker_triplet, "c_3d_cm", None
         )
 
-    if marker_a is None or marker_b is None:
-        return None, None
-    return _as_point3(marker_a), _as_point3(marker_b)
+    if marker_a is None or marker_b is None or marker_c is None:
+        return None, None, None
+    return _as_point3(marker_a), _as_point3(marker_b), _as_point3(marker_c)
 
 
 def _as_point3(point: Any) -> Point3:
     return (float(point[0]), float(point[1]), float(point[2]))
 
 
-def _apply_tip_offset(
-    marker_center_cm: Point3,
-    direction: tuple[float, float, float],
+def _marker_distances(
+    marker_a_cm: Point3,
+    marker_b_cm: Point3,
+    marker_c_cm: Point3,
+) -> dict[str, float]:
+    return {
+        "ab": distance_3d(marker_a_cm, marker_b_cm),
+        "ac": distance_3d(marker_a_cm, marker_c_cm),
+        "bc": distance_3d(marker_b_cm, marker_c_cm),
+    }
+
+
+def _expected_marker_distances(
+    tool_parameters: ToolParameters,
+) -> dict[str, float]:
+    ab = tool_parameters.marker_distance_cm
+    along = tool_parameters.marker_c_along_ab_cm
+    offset = tool_parameters.marker_c_offset_cm
+    if ab is None or along is None or offset is None:
+        return {}
+    return {
+        "ab": float(ab),
+        "ac": (float(along) ** 2 + float(offset) ** 2) ** 0.5,
+        "bc": ((float(ab) - float(along)) ** 2 + float(offset) ** 2) ** 0.5,
+    }
+
+
+def _distances_are_valid(
+    measured: dict[str, float],
+    expected: dict[str, float],
+    tolerance_ratio: float,
+) -> bool:
+    for key, expected_distance in expected.items():
+        if expected_distance <= 0.0:
+            continue
+        tolerance = max(float(tolerance_ratio) * expected_distance, 1.0)
+        if abs(measured[key] - expected_distance) > tolerance:
+            return False
+    return True
+
+
+def _apply_local_offset(
+    origin_cm: Point3,
+    rotation_matrix: tuple[Point3, Point3, Point3],
     tip_offset_cm: tuple[float, float, float],
 ) -> Point3:
-    offset_along_tool, offset_y, offset_z = tip_offset_cm
+    ox, oy, oz = tip_offset_cm
     return (
-        marker_center_cm[0] + direction[0] * offset_along_tool,
-        marker_center_cm[1] + direction[1] * offset_along_tool + offset_y,
-        marker_center_cm[2] + direction[2] * offset_along_tool + offset_z,
+        origin_cm[0]
+        + rotation_matrix[0][0] * ox
+        + rotation_matrix[0][1] * oy
+        + rotation_matrix[0][2] * oz,
+        origin_cm[1]
+        + rotation_matrix[1][0] * ox
+        + rotation_matrix[1][1] * oy
+        + rotation_matrix[1][2] * oz,
+        origin_cm[2]
+        + rotation_matrix[2][0] * ox
+        + rotation_matrix[2][1] * oy
+        + rotation_matrix[2][2] * oz,
     )
 
 

@@ -1,6 +1,8 @@
-numpy
+numpy<2
 opencv-contrib-python
 mediapipe
 scipy
 paho-mqtt
+roboticstoolbox-python
+websockets<13
 pytest
