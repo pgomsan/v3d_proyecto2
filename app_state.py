@@ -108,14 +108,26 @@ DEFAULT_CONFIG: dict[str, Any] = {
             "open_hand": "stop",
             "closed_fist": "continue",
             "two_fingers": "pause",
+            "three_fingers": "home",
             "unknown": "none",
         },
+        # Poses articulares fijas (grados) que puede disparar un comando.
+        # "home" = brazo vertical, herramienta recta hacia arriba.
+        "poses": {
+            "home": [0.0, -90.0, 0.0, -90.0, 0.0, 0.0],
+        },
+        "exclusion_radius_ratio": 0.18,
+        "confirm_frames": 6,
     },
     "robodk_handoff": {
         "enabled": True,
         "output_frame": "camera",
         "tool_id": "bisturi_01",
         "owner": "companion_project",
+    },
+    "ar": {
+        # Escala de la maqueta del UR5 en realidad aumentada (1.0 = real).
+        "robot_scale": 0.4,
     },
 }
 

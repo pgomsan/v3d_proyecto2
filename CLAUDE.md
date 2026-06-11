@@ -17,7 +17,7 @@ No build step. OpenCV and NumPy are imported with `try/except ModuleNotFoundErro
 
 ## Architecture
 
-End-to-end stereo pose pipeline is **implemented and working** (RMS estéreo ≈ 2.17 px on the current calibration). Gestures, homography, and `select_points` are still stubs flagged `pending=True` in `app.py`.
+End-to-end stereo pose pipeline is **implemented and working** (RMS estéreo ≈ 2.17 px on the current calibration). Gesture control is **implemented** (MediaPipe Tasks Hand Landmarker → `open_hand`/`closed_fist`/`two_fingers`/`three_fingers` → robot stop/continue/pause/go-to-fixed-pose). The free-hand gesture only counts when it is away from the tool markers (the hand holding the tool is ignored) and is held for `confirm_frames`. Fixed poses live in `config.gestures.poses` as joint vectors in degrees (`home` = arm straight up). Homography and `select_points` are still stubs flagged `pending=True` in `app.py`.
 
 ### Pipeline (left + right camera → tool pose)
 
@@ -34,12 +34,22 @@ CameraSource (vision/camera.py)
 
 `main_pose.run_pose_estimation` runs this loop; `preview_marker_detection` runs only the detection half for HSV tuning.
 
+The per-frame compute lives in `main_pose.StereoPoseProcessor.process()` (pure compute → `PoseFrameResult`); drawing is `draw_pose_frame()`. Both the sequential loop (`run_pose_estimation`) and the multithreaded app (`main_app3d`) share them, so the vision logic has one source of truth.
+
+### Augmented reality (2.3) — `augmented_reality.AugmentedRobot` / `run_pose_with_ar`
+
+Projects a **real-scale virtual UR5 onto the left camera image**, anchored at the captured world origin, with position-only IK so its TCP follows the physical tool ("grabs" it on screen). Works in the **raw chessboard PnP frame** (the only one geometrically registered with the image) — it deliberately **ignores `world_flip_z`/`world_scale`**, which only exist for the Swift visor. K is `stereo.p_left[:3,:3]` with zero distortion (same K `solvePnP` used), so `cv2.projectPoints` is exact. `fkine_all` returns spurious origin frames (indices 9–11 on UR5); `_joint_pixels` filters them and forces the real `fkine` TCP as the last point.
+
+### Multithreaded app (2.5) — `main_app3d.run_app_3d`
+
+Three threads talking through single-slot latest-value mailboxes (`_LatestSlot`): a **vision** worker (capture+rectify+detect+triangulate+pose), a **gesture** worker (MediaPipe + `GestureController.update`), and the **main** thread (UR5 viewer + OpenCV windows). GUI (OpenCV/Swift) stays on the main thread — required on macOS. Real parallelism because cv2 and MediaPipe release the GIL. `GestureController` splits `update()` (analysis, runs in the gesture thread) from `draw()` (overlay, runs in main) so no frame is shared mutably; the main thread reads `controller.active`/`last_command` to drive following and fixed-pose moves.
+
 ### Where things live (and don't)
 
 - **`pose/`** — pure math, no OpenCV. Easy to unit-test. Don't import `cv2` here.
 - **`vision/`** — everything that touches frames or calibration data.
 - **`calibration/`** — chessboard capture + intrinsics + stereo.
-- **`gestures/`** — MediaPipe wrappers (still stubs).
+- **`gestures/`** — MediaPipe Hand Landmarker wrapper (`hand_detector.py`) + pure finger-counting classifier and `GestureController` (`gesture_classifier.py`). The classifier logic is OpenCV-free and unit-tested with synthetic landmarks. Needs `gestures/models/hand_landmarker.task` (auto-downloaded on first use, git-ignored).
 - **`robot/`** — handoff surface only. No kinematics, no control. The partner project consumes the JSON payload from `state/last_pose.json`.
 
 ### Pose payload (what RoboDK consumes)

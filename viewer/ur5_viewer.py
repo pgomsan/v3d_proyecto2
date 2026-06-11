@@ -671,6 +671,25 @@ class UR5Visualizer:
                 return False
         return True
 
+    def move_to_named_pose(self, joint_degrees: Any) -> bool:
+        """Fija una pose articular objetivo fija (en grados).
+
+        El robot se desplazara hacia ella en las siguientes llamadas a
+        :meth:`step` a velocidad limitada. Mientras no se reanude el
+        seguimiento, el robot se queda en esa pose. Devuelve si se acepto.
+        """
+        if self.ur5 is None or joint_degrees is None:
+            return False
+        target_q = np.radians(np.asarray(joint_degrees, dtype=float))
+        if target_q.shape != np.asarray(self.ur5.q).shape:
+            print(
+                "Aviso: la pose de gesto no tiene el numero de articulaciones "
+                f"del UR5 ({np.asarray(self.ur5.q).shape[0]})."
+            )
+            return False
+        self._target_q = target_q
+        return True
+
     def step(self) -> None:
         if self.ur5 is not None and self._target_q is not None:
             max_step_rad = self.max_joint_speed_rad_s * self.dt

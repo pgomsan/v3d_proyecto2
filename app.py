@@ -22,6 +22,8 @@ from calibration.world_transform import (
     rotate_world_yaw_90deg,
     toggle_world_flip_z,
 )
+from augmented_reality import run_pose_with_ar
+from main_app3d import run_app_3d
 from main_gestures import preview_gesture_detection, run_gesture_detection
 from main_pose import (
     preview_marker_detection,
@@ -113,14 +115,23 @@ DEFAULT_CONFIG: dict[str, Any] = {
             "open_hand": "stop",
             "closed_fist": "continue",
             "two_fingers": "pause",
+            "three_fingers": "home",
             "unknown": "none",
         },
+        "poses": {
+            "home": [0.0, -90.0, 0.0, -90.0, 0.0, 0.0],
+        },
+        "exclusion_radius_ratio": 0.18,
+        "confirm_frames": 6,
     },
     "robodk_handoff": {
         "enabled": True,
         "output_frame": "camera",
         "tool_id": "bisturi_01",
         "owner": "companion_project",
+    },
+    "ar": {
+        "robot_scale": 0.4,
     },
     "calibration": {
         "chessboard_pattern_size": [7, 7],
@@ -182,9 +193,11 @@ MENU_ITEMS = [
     MenuItem("Camaras + visor UR5 en vivo", run_pose_with_ur5_viewer),
     MenuItem("Probar visor UR5 (pose fija)", launch_ur5_viewer),
     MenuItem("Visor UR5 siguiendo herramienta", run_ur5_pose_follower),
-    MenuItem("Probar deteccion de gestos", preview_gesture_detection, pending=True),
-    MenuItem("Ejecutar deteccion de gestos", run_gesture_detection, pending=True),
-    MenuItem("Ejecutar pose + gestos", run_pose_and_gestures, pending=True),
+    MenuItem("Probar deteccion de gestos", preview_gesture_detection),
+    MenuItem("Ejecutar deteccion de gestos", run_gesture_detection),
+    MenuItem("Ejecutar pose + gestos", run_pose_and_gestures),
+    MenuItem("App 3D multihilo (vision + gestos + robot)", run_app_3d),
+    MenuItem("Realidad aumentada (UR5 virtual sobre la imagen)", run_pose_with_ar),
     MenuItem("Ver ultimo estado guardado", lambda: show_last_saved_data()),
     MenuItem("Ver configuracion", lambda: show_config()),
     MenuItem("Salir", None),

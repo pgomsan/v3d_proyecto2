@@ -8,3 +8,4 @@ calibration/*.npz
 state/logs/*.jsonl
 data/recordings/*
 !data/recordings/.gitkeep
+gestures/models/*.task
